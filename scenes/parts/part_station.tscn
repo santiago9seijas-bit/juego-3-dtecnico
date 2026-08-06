@@ -1,0 +1,58 @@
+[gd_scene load_steps=9 format=3]
+
+[ext_resource type="Script" path="res://scenes/parts/part_station.gd" id="1_station"]
+
+[sub_resource type="BoxShape3D" id="Shape_shelf"]
+size = Vector3(1.8, 1.4, 0.8)
+
+[sub_resource type="BoxMesh" id="Mesh_shelf"]
+size = Vector3(1.4, 1.1, 0.5)
+
+[sub_resource type="StandardMaterial3D" id="Mat_shelf"]
+albedo_color = Color(0.45, 0.36, 0.24, 1)
+roughness = 0.8
+
+[sub_resource type="BoxMesh" id="Mesh_part"]
+size = Vector3(0.6, 0.35, 0.25)
+
+[sub_resource type="StandardMaterial3D" id="Mat_part"]
+albedo_color = Color(0.25, 0.6, 0.9, 1)
+metallic = 0.4
+roughness = 0.4
+
+[sub_resource type="BoxMesh" id="Mesh_highlight"]
+size = Vector3(1.5, 1.2, 0.6)
+
+[sub_resource type="StandardMaterial3D" id="Mat_highlight"]
+albedo_color = Color(0.4, 1, 0.5, 0.3)
+transparency = 1
+
+[node name="PartStation" type="StaticBody3D"]
+script = ExtResource("1_station")
+
+[node name="CollisionShape3D" type="CollisionShape3D" parent="."]
+shape = SubResource("Shape_shelf")
+
+[node name="Shelf" type="MeshInstance3D" parent="."]
+position = Vector3(0, 0.55, 0)
+mesh = SubResource("Mesh_shelf")
+surface_material_override/0 = SubResource("Mat_shelf")
+
+[node name="Part" type="MeshInstance3D" parent="."]
+position = Vector3(0, 0.55, -0.14)
+mesh = SubResource("Mesh_part")
+surface_material_override/0 = SubResource("Mat_part")
+
+[node name="Highlight" type="MeshInstance3D" parent="."]
+visible = false
+position = Vector3(0, 0.55, 0)
+mesh = SubResource("Mesh_highlight")
+surface_material_override/0 = SubResource("Mat_highlight")
+
+[node name="Label" type="Label3D" parent="."]
+position = Vector3(0, 1.4, 0)
+text = "Parte"
+font_size = 48
+outline_size = 8
+modulate = Color(1, 1, 1, 1)
+billboard = 1

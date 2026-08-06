@@ -1,0 +1,352 @@
+[gd_scene load_steps=4 format=3]
+
+[ext_resource type="Script" path="res://scenes/minigame/minigame.gd" id="1_minigame"]
+[ext_resource type="Script" path="res://scenes/minigame/slot.gd" id="2_slot"]
+
+[sub_resource type="StyleBoxFlat" id="StyleBoxFlat_slot"]
+bg_color = Color(0.12, 0.13, 0.16, 1)
+border_width_left = 2
+border_width_top = 2
+border_width_right = 2
+border_width_bottom = 2
+border_color = Color(0.4, 0.45, 0.55, 1)
+corner_radius_top_left = 8
+corner_radius_top_right = 8
+corner_radius_bottom_right = 8
+corner_radius_bottom_left = 8
+
+[node name="Minigame" type="PanelContainer"]
+custom_minimum_size = Vector2(860, 520)
+script = ExtResource("1_minigame")
+
+[node name="Margin" type="MarginContainer" parent="."]
+theme_override_constants/margin_left = 24
+theme_override_constants/margin_top = 18
+theme_override_constants/margin_right = 24
+theme_override_constants/margin_bottom = 18
+
+[node name="VBox" type="VBoxContainer" parent="Margin"]
+
+[node name="Title" type="Label" parent="Margin/VBox"]
+theme_override_font_sizes/font_size = 24
+text = "REPARACION DE COMPUTADORA"
+horizontal_alignment = 1
+
+[node name="SymptomLabel" type="Label" parent="Margin/VBox"]
+unique_name_in_owner = true
+theme_override_font_sizes/font_size = 18
+text = "Sintoma"
+horizontal_alignment = 1
+
+[node name="Slots" type="HBoxContainer" parent="Margin/VBox"]
+theme_override_constants/separation = 6
+alignment = 1
+
+[node name="SlotRAM" type="PanelContainer" parent="Margin/VBox/Slots"]
+custom_minimum_size = Vector2(100, 0)
+theme_override_styles/panel = SubResource("StyleBoxFlat_slot")
+script = ExtResource("2_slot")
+slot_type = "ram"
+
+[node name="VBox" type="VBoxContainer" parent="Margin/VBox/Slots/SlotRAM"]
+
+[node name="TitleLabel" type="Label" parent="Margin/VBox/Slots/SlotRAM/VBox"]
+theme_override_font_sizes/font_size = 14
+text = "RAM"
+horizontal_alignment = 1
+
+[node name="PartLabel" type="Label" parent="Margin/VBox/Slots/SlotRAM/VBox"]
+size_flags_vertical = 3
+theme_override_font_sizes/font_size = 12
+text = "Memoria RAM 8GB"
+horizontal_alignment = 1
+vertical_alignment = 1
+autowrap_mode = 2
+
+[node name="StatusLabel" type="Label" parent="Margin/VBox/Slots/SlotRAM/VBox"]
+theme_override_font_sizes/font_size = 12
+text = "OK"
+horizontal_alignment = 1
+
+[node name="ExamineButton" type="Button" parent="Margin/VBox/Slots/SlotRAM/VBox"]
+text = "Examinar"
+
+[node name="RemoveButton" type="Button" parent="Margin/VBox/Slots/SlotRAM/VBox"]
+text = "Sacar"
+
+[node name="SlotHDD" type="PanelContainer" parent="Margin/VBox/Slots"]
+custom_minimum_size = Vector2(100, 0)
+theme_override_styles/panel = SubResource("StyleBoxFlat_slot")
+script = ExtResource("2_slot")
+slot_type = "hdd"
+
+[node name="VBox" type="VBoxContainer" parent="Margin/VBox/Slots/SlotHDD"]
+
+[node name="TitleLabel" type="Label" parent="Margin/VBox/Slots/SlotHDD/VBox"]
+theme_override_font_sizes/font_size = 14
+text = "Disco Duro"
+horizontal_alignment = 1
+
+[node name="PartLabel" type="Label" parent="Margin/VBox/Slots/SlotHDD/VBox"]
+size_flags_vertical = 3
+theme_override_font_sizes/font_size = 12
+text = "Disco SSD 1TB"
+horizontal_alignment = 1
+vertical_alignment = 1
+autowrap_mode = 2
+
+[node name="StatusLabel" type="Label" parent="Margin/VBox/Slots/SlotHDD/VBox"]
+theme_override_font_sizes/font_size = 12
+text = "OK"
+horizontal_alignment = 1
+
+[node name="ExamineButton" type="Button" parent="Margin/VBox/Slots/SlotHDD/VBox"]
+text = "Examinar"
+
+[node name="RemoveButton" type="Button" parent="Margin/VBox/Slots/SlotHDD/VBox"]
+text = "Sacar"
+
+[node name="SlotPSU" type="PanelContainer" parent="Margin/VBox/Slots"]
+custom_minimum_size = Vector2(100, 0)
+theme_override_styles/panel = SubResource("StyleBoxFlat_slot")
+script = ExtResource("2_slot")
+slot_type = "psu"
+
+[node name="VBox" type="VBoxContainer" parent="Margin/VBox/Slots/SlotPSU"]
+
+[node name="TitleLabel" type="Label" parent="Margin/VBox/Slots/SlotPSU/VBox"]
+theme_override_font_sizes/font_size = 14
+text = "Fuente"
+horizontal_alignment = 1
+
+[node name="PartLabel" type="Label" parent="Margin/VBox/Slots/SlotPSU/VBox"]
+size_flags_vertical = 3
+theme_override_font_sizes/font_size = 12
+text = "Fuente 550W"
+horizontal_alignment = 1
+vertical_alignment = 1
+autowrap_mode = 2
+
+[node name="StatusLabel" type="Label" parent="Margin/VBox/Slots/SlotPSU/VBox"]
+theme_override_font_sizes/font_size = 12
+text = "OK"
+horizontal_alignment = 1
+
+[node name="ExamineButton" type="Button" parent="Margin/VBox/Slots/SlotPSU/VBox"]
+text = "Examinar"
+
+[node name="RemoveButton" type="Button" parent="Margin/VBox/Slots/SlotPSU/VBox"]
+text = "Sacar"
+
+[node name="SlotGPU" type="PanelContainer" parent="Margin/VBox/Slots"]
+custom_minimum_size = Vector2(100, 0)
+theme_override_styles/panel = SubResource("StyleBoxFlat_slot")
+script = ExtResource("2_slot")
+slot_type = "gpu"
+
+[node name="VBox" type="VBoxContainer" parent="Margin/VBox/Slots/SlotGPU"]
+
+[node name="TitleLabel" type="Label" parent="Margin/VBox/Slots/SlotGPU/VBox"]
+theme_override_font_sizes/font_size = 14
+text = "Grafica"
+horizontal_alignment = 1
+
+[node name="PartLabel" type="Label" parent="Margin/VBox/Slots/SlotGPU/VBox"]
+size_flags_vertical = 3
+theme_override_font_sizes/font_size = 12
+text = "Grafica GTX 3060"
+horizontal_alignment = 1
+vertical_alignment = 1
+autowrap_mode = 2
+
+[node name="StatusLabel" type="Label" parent="Margin/VBox/Slots/SlotGPU/VBox"]
+theme_override_font_sizes/font_size = 12
+text = "OK"
+horizontal_alignment = 1
+
+[node name="ExamineButton" type="Button" parent="Margin/VBox/Slots/SlotGPU/VBox"]
+text = "Examinar"
+
+[node name="RemoveButton" type="Button" parent="Margin/VBox/Slots/SlotGPU/VBox"]
+text = "Sacar"
+
+[node name="SlotMB" type="PanelContainer" parent="Margin/VBox/Slots"]
+custom_minimum_size = Vector2(100, 0)
+theme_override_styles/panel = SubResource("StyleBoxFlat_slot")
+script = ExtResource("2_slot")
+slot_type = "mb"
+
+[node name="VBox" type="VBoxContainer" parent="Margin/VBox/Slots/SlotMB"]
+
+[node name="TitleLabel" type="Label" parent="Margin/VBox/Slots/SlotMB/VBox"]
+theme_override_font_sizes/font_size = 14
+text = "Placa Madre"
+horizontal_alignment = 1
+
+[node name="PartLabel" type="Label" parent="Margin/VBox/Slots/SlotMB/VBox"]
+size_flags_vertical = 3
+theme_override_font_sizes/font_size = 12
+text = "Placa B550"
+horizontal_alignment = 1
+vertical_alignment = 1
+autowrap_mode = 2
+
+[node name="StatusLabel" type="Label" parent="Margin/VBox/Slots/SlotMB/VBox"]
+theme_override_font_sizes/font_size = 12
+text = "OK"
+horizontal_alignment = 1
+
+[node name="ExamineButton" type="Button" parent="Margin/VBox/Slots/SlotMB/VBox"]
+text = "Examinar"
+
+[node name="RemoveButton" type="Button" parent="Margin/VBox/Slots/SlotMB/VBox"]
+text = "Sacar"
+
+[node name="SlotCPU" type="PanelContainer" parent="Margin/VBox/Slots"]
+custom_minimum_size = Vector2(100, 0)
+theme_override_styles/panel = SubResource("StyleBoxFlat_slot")
+script = ExtResource("2_slot")
+slot_type = "cpu"
+
+[node name="VBox" type="VBoxContainer" parent="Margin/VBox/Slots/SlotCPU"]
+
+[node name="TitleLabel" type="Label" parent="Margin/VBox/Slots/SlotCPU/VBox"]
+theme_override_font_sizes/font_size = 14
+text = "Procesador"
+horizontal_alignment = 1
+
+[node name="PartLabel" type="Label" parent="Margin/VBox/Slots/SlotCPU/VBox"]
+size_flags_vertical = 3
+theme_override_font_sizes/font_size = 12
+text = "Procesador i5-12400"
+horizontal_alignment = 1
+vertical_alignment = 1
+autowrap_mode = 2
+
+[node name="StatusLabel" type="Label" parent="Margin/VBox/Slots/SlotCPU/VBox"]
+theme_override_font_sizes/font_size = 12
+text = "OK"
+horizontal_alignment = 1
+
+[node name="ExamineButton" type="Button" parent="Margin/VBox/Slots/SlotCPU/VBox"]
+text = "Examinar"
+
+[node name="RemoveButton" type="Button" parent="Margin/VBox/Slots/SlotCPU/VBox"]
+text = "Sacar"
+
+[node name="SlotFAN" type="PanelContainer" parent="Margin/VBox/Slots"]
+custom_minimum_size = Vector2(100, 0)
+theme_override_styles/panel = SubResource("StyleBoxFlat_slot")
+script = ExtResource("2_slot")
+slot_type = "fan"
+
+[node name="VBox" type="VBoxContainer" parent="Margin/VBox/Slots/SlotFAN"]
+
+[node name="TitleLabel" type="Label" parent="Margin/VBox/Slots/SlotFAN/VBox"]
+theme_override_font_sizes/font_size = 14
+text = "Fancooler"
+horizontal_alignment = 1
+
+[node name="PartLabel" type="Label" parent="Margin/VBox/Slots/SlotFAN/VBox"]
+size_flags_vertical = 3
+theme_override_font_sizes/font_size = 12
+text = "Fancooler 120mm"
+horizontal_alignment = 1
+vertical_alignment = 1
+autowrap_mode = 2
+
+[node name="StatusLabel" type="Label" parent="Margin/VBox/Slots/SlotFAN/VBox"]
+theme_override_font_sizes/font_size = 12
+text = "OK"
+horizontal_alignment = 1
+
+[node name="ExamineButton" type="Button" parent="Margin/VBox/Slots/SlotFAN/VBox"]
+text = "Examinar"
+
+[node name="RemoveButton" type="Button" parent="Margin/VBox/Slots/SlotFAN/VBox"]
+text = "Sacar"
+
+[node name="TrayLabel" type="Label" parent="Margin/VBox"]
+theme_override_font_sizes/font_size = 14
+text = "TUS REPUESTOS (arrastra el modelo correcto al slot dañado)"
+horizontal_alignment = 1
+
+[node name="Tray" type="VBoxContainer" parent="Margin/VBox"]
+unique_name_in_owner = true
+theme_override_constants/separation = 8
+alignment = 1
+
+[node name="FeedbackLabel" type="Label" parent="Margin/VBox"]
+unique_name_in_owner = true
+theme_override_font_sizes/font_size = 15
+text = ""
+horizontal_alignment = 1
+
+[node name="ExamineLeftLabel" type="Label" parent="Margin/VBox"]
+unique_name_in_owner = true
+theme_override_font_sizes/font_size = 13
+text = "Examinaciones restantes: 4 / 4"
+horizontal_alignment = 1
+
+[node name="ResultLabel" type="Label" parent="Margin/VBox"]
+unique_name_in_owner = true
+theme_override_font_sizes/font_size = 24
+text = ""
+horizontal_alignment = 1
+
+[node name="CloseButton" type="Button" parent="Margin/VBox"]
+unique_name_in_owner = true
+text = "Cerrar"
+
+[node name="Overlay" type="Control" parent="."]
+mouse_filter = 2
+
+[node name="HelpButton" type="Button" parent="Overlay"]
+unique_name_in_owner = true
+anchors_preset = 2
+anchor_top = 1.0
+anchor_bottom = 1.0
+offset_left = 14.0
+offset_top = -30.0
+offset_right = 34.0
+offset_bottom = -12.0
+grow_vertical = 0
+custom_minimum_size = Vector2(20, 20)
+theme_override_font_sizes/font_size = 10
+text = "?"
+
+[node name="HelpPanel" type="PanelContainer" parent="Overlay"]
+unique_name_in_owner = true
+visible = false
+anchors_preset = 2
+anchor_top = 1.0
+anchor_bottom = 1.0
+offset_left = 12.0
+offset_top = -340.0
+offset_right = 552.0
+offset_bottom = -52.0
+grow_vertical = 0
+
+[node name="Margin" type="MarginContainer" parent="Overlay/HelpPanel"]
+theme_override_constants/margin_left = 20
+theme_override_constants/margin_top = 14
+theme_override_constants/margin_right = 20
+theme_override_constants/margin_bottom = 14
+
+[node name="VBox" type="VBoxContainer" parent="Overlay/HelpPanel/Margin"]
+
+[node name="HelpTitle" type="Label" parent="Overlay/HelpPanel/Margin/VBox"]
+theme_override_font_sizes/font_size = 22
+text = "AYUDA"
+horizontal_alignment = 1
+
+[node name="HelpRich" type="RichTextLabel" parent="Overlay/HelpPanel/Margin/VBox"]
+unique_name_in_owner = true
+custom_minimum_size = Vector2(0, 200)
+theme_override_font_sizes/font_size = 14
+text = "COMO JUGAR"
+horizontal_alignment = 1
+
+[node name="HelpCloseButton" type="Button" parent="Overlay/HelpPanel/Margin/VBox"]
+unique_name_in_owner = true
+text = "Cerrar ayuda"

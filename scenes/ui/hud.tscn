@@ -1,0 +1,290 @@
+[gd_scene load_steps=5 format=3]
+
+[ext_resource type="Script" path="res://scenes/ui/hud.gd" id="1_hud"]
+[ext_resource type="PackedScene" path="res://scenes/minigame/minigame.tscn" id="2_minigame"]
+[ext_resource type="PackedScene" path="res://scenes/ui/main_menu.tscn" id="3_menu"]
+[ext_resource type="Script" path="res://scenes/ui/removal_panel.gd" id="4_removal"]
+
+[node name="HUD" type="CanvasLayer"]
+script = ExtResource("1_hud")
+
+[node name="Gameplay" type="Control" parent="."]
+unique_name_in_owner = true
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
+mouse_filter = 2
+
+[node name="Crosshair" type="Label" parent="Gameplay"]
+anchors_preset = 8
+anchor_left = 0.5
+anchor_top = 0.5
+anchor_right = 0.5
+anchor_bottom = 0.5
+offset_left = -8.0
+offset_top = -8.0
+offset_right = 8.0
+offset_bottom = 8.0
+grow_horizontal = 2
+grow_vertical = 2
+theme_override_font_sizes/font_size = 20
+text = "+"
+horizontal_alignment = 1
+
+[node name="PromptLabel" type="Label" parent="Gameplay"]
+unique_name_in_owner = true
+anchors_preset = 7
+anchor_left = 0.5
+anchor_top = 1.0
+anchor_right = 0.5
+anchor_bottom = 1.0
+offset_left = -150.0
+offset_top = -120.0
+offset_right = 150.0
+offset_bottom = -80.0
+grow_horizontal = 2
+grow_vertical = 0
+theme_override_font_sizes/font_size = 18
+text = "E - Reparar"
+horizontal_alignment = 1
+
+[node name="CarriedLabel" type="Label" parent="Gameplay"]
+unique_name_in_owner = true
+anchors_preset = 1
+anchor_left = 1.0
+anchor_right = 1.0
+offset_left = -330.0
+offset_top = 12.0
+offset_right = -16.0
+offset_bottom = 34.0
+grow_horizontal = 0
+theme_override_font_sizes/font_size = 15
+text = "Llevas: —"
+horizontal_alignment = 2
+
+[node name="MessageLabel" type="Label" parent="Gameplay"]
+unique_name_in_owner = true
+anchors_preset = 5
+anchor_left = 0.5
+anchor_right = 0.5
+offset_left = -300.0
+offset_top = 90.0
+offset_right = 300.0
+offset_bottom = 120.0
+grow_horizontal = 2
+theme_override_font_sizes/font_size = 18
+text = ""
+horizontal_alignment = 1
+
+[node name="TimerLabel" type="Label" parent="Gameplay"]
+unique_name_in_owner = true
+anchors_preset = 5
+anchor_left = 0.5
+anchor_right = 0.5
+offset_left = -150.0
+offset_top = 12.0
+offset_right = 150.0
+offset_bottom = 44.0
+grow_horizontal = 2
+theme_override_font_sizes/font_size = 20
+text = "Tiempo: 00:00"
+horizontal_alignment = 1
+
+[node name="ScoreLabel" type="Label" parent="Gameplay"]
+unique_name_in_owner = true
+anchors_preset = 5
+anchor_left = 0.5
+anchor_right = 0.5
+offset_left = -150.0
+offset_top = 44.0
+offset_right = 150.0
+offset_bottom = 74.0
+grow_horizontal = 2
+theme_override_font_sizes/font_size = 18
+text = "Puntaje: 0"
+horizontal_alignment = 1
+
+[node name="ErrorsLabel" type="Label" parent="Gameplay"]
+unique_name_in_owner = true
+anchors_preset = 5
+anchor_left = 0.5
+anchor_right = 0.5
+offset_left = -150.0
+offset_top = 72.0
+offset_right = 150.0
+offset_bottom = 98.0
+grow_horizontal = 2
+theme_override_font_sizes/font_size = 15
+text = "Errores: 0"
+horizontal_alignment = 1
+
+[node name="Sfx" type="AudioStreamPlayer" parent="."]
+unique_name_in_owner = true
+
+[node name="Minigame" parent="Gameplay" instance=ExtResource("2_minigame")]
+unique_name_in_owner = true
+visible = false
+anchors_preset = 8
+anchor_left = 0.5
+anchor_top = 0.5
+anchor_right = 0.5
+anchor_bottom = 0.5
+offset_left = -430.0
+offset_top = -260.0
+offset_right = 430.0
+offset_bottom = 260.0
+grow_horizontal = 2
+grow_vertical = 2
+
+[node name="PartPicker" type="PanelContainer" parent="Gameplay"]
+unique_name_in_owner = true
+visible = false
+anchors_preset = 8
+anchor_left = 0.5
+anchor_top = 0.5
+anchor_right = 0.5
+anchor_bottom = 0.5
+offset_left = -210.0
+offset_top = -160.0
+offset_right = 210.0
+offset_bottom = 160.0
+grow_horizontal = 2
+grow_vertical = 2
+
+[node name="Margin" type="MarginContainer" parent="Gameplay/PartPicker"]
+theme_override_constants/margin_left = 20
+theme_override_constants/margin_top = 14
+theme_override_constants/margin_right = 20
+theme_override_constants/margin_bottom = 14
+
+[node name="VBox" type="VBoxContainer" parent="Gameplay/PartPicker/Margin"]
+theme_override_constants/separation = 8
+
+[node name="PickerTitle" type="Label" parent="Gameplay/PartPicker/Margin/VBox"]
+unique_name_in_owner = true
+theme_override_font_sizes/font_size = 20
+text = "Elige el modelo:"
+horizontal_alignment = 1
+
+[node name="PickerList" type="VBoxContainer" parent="Gameplay/PartPicker/Margin/VBox"]
+unique_name_in_owner = true
+
+[node name="PickerCancel" type="Button" parent="Gameplay/PartPicker/Margin/VBox"]
+unique_name_in_owner = true
+text = "Cancelar"
+
+[node name="RemovalPanel" type="PanelContainer" parent="Gameplay"]
+unique_name_in_owner = true
+visible = false
+anchors_preset = 8
+anchor_left = 0.5
+anchor_top = 0.5
+anchor_right = 0.5
+anchor_bottom = 0.5
+offset_left = -210.0
+offset_top = -165.0
+offset_right = 210.0
+offset_bottom = 165.0
+grow_horizontal = 2
+grow_vertical = 2
+script = ExtResource("4_removal")
+custom_minimum_size = Vector2(420, 330)
+
+[node name="Margin" type="MarginContainer" parent="Gameplay/RemovalPanel"]
+theme_override_constants/margin_left = 20
+theme_override_constants/margin_top = 14
+theme_override_constants/margin_right = 20
+theme_override_constants/margin_bottom = 14
+
+[node name="VBox" type="VBoxContainer" parent="Gameplay/RemovalPanel/Margin"]
+theme_override_constants/separation = 12
+
+[node name="RemovalTitle" type="Label" parent="Gameplay/RemovalPanel/Margin/VBox"]
+unique_name_in_owner = true
+theme_override_font_sizes/font_size = 20
+text = "Desarmar"
+horizontal_alignment = 1
+
+[node name="RemovalContent" type="VBoxContainer" parent="Gameplay/RemovalPanel/Margin/VBox"]
+unique_name_in_owner = true
+
+[node name="RemovalCancel" type="Button" parent="Gameplay/RemovalPanel/Margin/VBox"]
+unique_name_in_owner = true
+text = "Cancelar"
+
+[node name="MainMenu" parent="." instance=ExtResource("3_menu")]
+unique_name_in_owner = true
+
+[node name="TutorialOverlay" type="ColorRect" parent="."]
+unique_name_in_owner = true
+visible = false
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
+mouse_filter = 0
+color = Color(0, 0, 0, 0.8)
+
+[node name="Margin" type="MarginContainer" parent="TutorialOverlay"]
+anchors_preset = 8
+anchor_left = 0.5
+anchor_top = 0.5
+anchor_right = 0.5
+anchor_bottom = 0.5
+offset_left = -260.0
+offset_top = -230.0
+offset_right = 260.0
+offset_bottom = 230.0
+grow_horizontal = 2
+grow_vertical = 2
+
+[node name="VBox" type="VBoxContainer" parent="TutorialOverlay/Margin"]
+theme_override_constants/separation = 12
+
+[node name="TutorialTitle" type="Label" parent="TutorialOverlay/Margin/VBox"]
+theme_override_font_sizes/font_size = 26
+text = "TUTORIAL DE NIVEL"
+horizontal_alignment = 1
+
+[node name="TutorialText" type="RichTextLabel" parent="TutorialOverlay/Margin/VBox"]
+unique_name_in_owner = true
+custom_minimum_size = Vector2(0, 250)
+bbcode_enabled = true
+text = ""
+
+[node name="TutorialPageLabel" type="Label" parent="TutorialOverlay/Margin/VBox"]
+unique_name_in_owner = true
+theme_override_font_sizes/font_size = 14
+text = "Página 1/1"
+horizontal_alignment = 1
+
+[node name="Nav" type="HBoxContainer" parent="TutorialOverlay/Margin/VBox"]
+alignment = 1
+theme_override_constants/separation = 16
+
+[node name="TutorialPrev" type="Button" parent="TutorialOverlay/Margin/VBox/Nav"]
+unique_name_in_owner = true
+custom_minimum_size = Vector2(120, 0)
+text = "Anterior"
+
+[node name="TutorialNext" type="Button" parent="TutorialOverlay/Margin/VBox/Nav"]
+unique_name_in_owner = true
+custom_minimum_size = Vector2(120, 0)
+text = "Siguiente"
+
+[node name="Buttons" type="HBoxContainer" parent="TutorialOverlay/Margin/VBox"]
+alignment = 1
+theme_override_constants/separation = 16
+
+[node name="TutorialContinue" type="Button" parent="TutorialOverlay/Margin/VBox/Buttons"]
+unique_name_in_owner = true
+custom_minimum_size = Vector2(160, 0)
+text = "Seguir"
+
+[node name="TutorialSkip" type="Button" parent="TutorialOverlay/Margin/VBox/Buttons"]
+unique_name_in_owner = true
+custom_minimum_size = Vector2(160, 0)
+text = "Omitir"

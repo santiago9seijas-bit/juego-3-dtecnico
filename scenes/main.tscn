@@ -1,0 +1,100 @@
+[gd_scene load_steps=15 format=3]
+
+[ext_resource type="Script" path="res://scenes/main.gd" id="1_main"]
+[ext_resource type="PackedScene" uid="uid://20ew4grixqcx" path="res://blender escenarios /escenario.glb" id="2_esc"]
+[ext_resource type="PackedScene" path="res://scenes/player/player.tscn" id="3_player"]
+[ext_resource type="PackedScene" path="res://scenes/ui/hud.tscn" id="4_hud"]
+
+[sub_resource type="BoxShape3D" id="BoxShape3D_floor"]
+size = Vector3(60, 1, 60)
+
+[sub_resource type="BoxShape3D" id="BoxShape3D_wall_side"]
+size = Vector3(44, 2.5, 0.5)
+
+[sub_resource type="BoxMesh" id="BoxMesh_wall_side"]
+size = Vector3(44, 2.5, 0.5)
+
+[sub_resource type="BoxShape3D" id="BoxShape3D_wall_front"]
+size = Vector3(0.5, 2.5, 40)
+
+[sub_resource type="BoxMesh" id="BoxMesh_wall_front"]
+size = Vector3(0.5, 2.5, 40)
+
+[sub_resource type="StandardMaterial3D" id="Mat_wall"]
+albedo_color = Color(0.3, 0.3, 0.38, 1)
+
+[sub_resource type="ProceduralSkyMaterial" id="Sky_mat"]
+
+[sub_resource type="Sky" id="Sky_sky"]
+sky_material = SubResource("Sky_mat")
+
+[sub_resource type="Environment" id="Env_env"]
+background_mode = 2
+sky = SubResource("Sky_sky")
+tonemap_mode = 2
+
+[node name="Main" type="Node3D"]
+script = ExtResource("1_main")
+
+[node name="escenario" parent="." instance=ExtResource("2_esc")]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -0.13880432, 0, -2.4570122)
+
+[node name="DirectionalLight3D" type="DirectionalLight3D" parent="."]
+rotation_degrees = Vector3(-50, -30, 0)
+shadow_enabled = true
+
+[node name="WorldEnvironment" type="WorldEnvironment" parent="."]
+environment = SubResource("Env_env")
+
+[node name="Player" parent="." instance=ExtResource("3_player")]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 2, 2)
+
+[node name="HUD" parent="." instance=ExtResource("4_hud")]
+
+[node name="Floor" type="StaticBody3D" parent="."]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, -0.15, 0)
+
+[node name="CollisionShape3D" type="CollisionShape3D" parent="Floor"]
+shape = SubResource("BoxShape3D_floor")
+
+[node name="WallNorth" type="StaticBody3D" parent="."]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 1.6, -20)
+
+[node name="CollisionShape3D" type="CollisionShape3D" parent="WallNorth"]
+shape = SubResource("BoxShape3D_wall_side")
+
+[node name="MeshInstance3D" type="MeshInstance3D" parent="WallNorth"]
+mesh = SubResource("BoxMesh_wall_side")
+surface_material_override/0 = SubResource("Mat_wall")
+
+[node name="WallSouth" type="StaticBody3D" parent="."]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 1.6, 15)
+
+[node name="CollisionShape3D" type="CollisionShape3D" parent="WallSouth"]
+shape = SubResource("BoxShape3D_wall_side")
+
+[node name="MeshInstance3D" type="MeshInstance3D" parent="WallSouth"]
+mesh = SubResource("BoxMesh_wall_side")
+surface_material_override/0 = SubResource("Mat_wall")
+
+[node name="WallEast" type="StaticBody3D" parent="."]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 19, 1.6, -2.5)
+
+[node name="CollisionShape3D" type="CollisionShape3D" parent="WallEast"]
+shape = SubResource("BoxShape3D_wall_front")
+
+[node name="MeshInstance3D" type="MeshInstance3D" parent="WallEast"]
+mesh = SubResource("BoxMesh_wall_front")
+surface_material_override/0 = SubResource("Mat_wall")
+
+[node name="WallWest" type="StaticBody3D" parent="."]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -19, 1.6, -2.5)
+
+[node name="CollisionShape3D" type="CollisionShape3D" parent="WallWest"]
+shape = SubResource("BoxShape3D_wall_front")
+
+[node name="MeshInstance3D" type="MeshInstance3D" parent="WallWest"]
+mesh = SubResource("BoxMesh_wall_front")
+surface_material_override/0 = SubResource("Mat_wall")
+
+[node name="Level" type="Node3D" parent="."]

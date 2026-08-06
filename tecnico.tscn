@@ -1,0 +1,13 @@
+[gd_scene format=3 uid="uid://b5ng278qq76gk"]
+
+[ext_resource type="Texture2D" uid="uid://ci0idkr2sanaf" path="res://blender escenarios /pruebasvg.svg" id="1_41jjm"]
+[ext_resource type="PackedScene" uid="uid://20ew4grixqcx" path="res://blender escenarios /escenario.glb" id="2_xtqvu"]
+
+[node name="tecnico" type="Node3D" unique_id=400267524]
+
+[node name="Sprite3D" type="Sprite3D" parent="." unique_id=1916815561]
+transform = Transform3D(-0.61961466, 0, -0.78490615, 0.769979, 0.19409738, -0.607831, 0.15234824, -0.98098224, -0.12026559, 0.885128, 0.49037182, 0)
+texture = ExtResource("1_41jjm")
+
+[node name="escenario" parent="." unique_id=2036825444 instance=ExtResource("2_xtqvu")]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -0.13880432, 0, -2.4570122)

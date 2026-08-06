@@ -1,0 +1,22 @@
+# Godot 4+ (Ignora la caché local, pero NO los archivos .import/.uid que se versionan)
+.godot/
+/android/
+
+# Exported builds / export templates
+/export/
+/build/
+*.exe
+*.pck
+*.zip
+
+# Blender / assets temp files
+*.blend1
+*.blend2
+~$*.blend
+*~backup/
+*.tmp
+
+# OS / editor noise
+.DS_Store
+Thumbs.db
+desktop.ini

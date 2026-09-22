@@ -3,7 +3,11 @@
 # Uso: ./tests/run_tests.sh
 set -e
 
-GODOT="$HOME/tools/godot/Godot_v4.6.2-stable_linux.x86_64"
+# Usa el Godot del sistema si no existe el binario local fijado antes.
+GODOT="${GODOT:-$HOME/tools/godot/Godot_v4.6.2-stable_linux.x86_64}"
+if [ ! -x "$GODOT" ]; then
+    GODOT="$(command -v godot)"
+fi
 DIR="$(cd "$(dirname "$0")/.." && pwd)"
 
 echo "== 1/7 import headless =="

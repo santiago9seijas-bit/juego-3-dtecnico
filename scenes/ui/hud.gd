@@ -14,46 +14,158 @@ extends CanvasLayer
 @onready var removal_panel: PanelContainer = %RemovalPanel
 @onready var sfx: AudioStreamPlayer = %Sfx
 @onready var errors_label: Label = %ErrorsLabel
-@onready var tutorial_overlay: Control = %TutorialOverlay
-@onready var tutorial_text: RichTextLabel = %TutorialText
-@onready var tutorial_page_label: Label = %TutorialPageLabel
-@onready var tutorial_prev: Button = %TutorialPrev
-@onready var tutorial_next: Button = %TutorialNext
-@onready var tutorial_continue: Button = %TutorialContinue
-@onready var tutorial_skip: Button = %TutorialSkip
 
 var _msg_until := 0.0
 var _removal_cb: Callable = Callable()
-var _tut_pages: Array = []
-var _tut_page := 0
+
+# UI propia del modo tutorial (se construye una sola vez en _ready).
+var tut_header: Label
+var tut_exit_button: Button
+var tut_intro: ColorRect
+var tut_intro_title: Label
+var tut_intro_body: RichTextLabel
+var tut_intro_start: Button
+var tut_intro_back: Button
+var tut_complete: CenterContainer
+var tut_repeat_button: Button
+var tut_complete_exit: Button
+var tut_complete_text: Label
+
+var _tut_part_shown := ""
+var _last_carried_text := ""
+var _last_timer_secs := -1
+var _last_score := -1
+var _last_errors := -1
+var _score_tween: Tween
+var _last_timer_outline := Color(-1.0, -1.0, -1.0)
 
 func _ready() -> void:
 	Game.hud = self
 	Game.game_started.connect(_on_game_started)
+	Game.tutorial_finished.connect(_on_tutorial_finished)
+	Game.tutorial_exited.connect(_on_tutorial_exited)
 	minigame.repaired.connect(_on_repair)
+	prompt_label.visible = false
 	message_label.visible = false
 	picker.visible = false
 	picker_cancel.pressed.connect(close_picker)
 	removal_panel.visible = false
 	removal_panel.done.connect(_on_removal_done)
 	removal_panel.cancel.connect(_on_removal_cancel)
-	tutorial_continue.pressed.connect(_end_tutorial)
-	tutorial_skip.pressed.connect(_skip_tutorial)
-	tutorial_prev.pressed.connect(_prev_tutorial_page)
-	tutorial_next.pressed.connect(_next_tutorial_page)
+	_build_tutorial_ui()
+	_style_ui()
+
+# Mismo look del menú principal: paneles oscuros con neón y botones animados.
+func _style_ui() -> void:
+	UiStyle.apply(gameplay_root)
+	UiStyle.apply(tut_header)
+	UiStyle.apply(tut_exit_button)
+	UiStyle.apply(tut_intro)
+	UiStyle.apply(tut_complete)
+	_neon_hud()
+
+# Marcador del juego con neón graffiti: tiempo, puntaje, errores, mochila,
+# mensajes y la mira central.
+func _neon_hud() -> void:
+	timer_label.add_theme_font_override("font", UiStyle.neon_font(0.24, 0.26))
+	score_label.add_theme_font_override("font", UiStyle.neon_font(0.3, 0.3))
+	errors_label.add_theme_font_override("font", UiStyle.neon_font(0.2, 0.18))
+	_neon_label(timer_label, 28, Color.WHITE, UiStyle.CYAN, 7, Color(UiStyle.CYAN, 0.55))
+	_neon_label(score_label, 30, UiStyle.CYAN_SOFT, UiStyle.MAGENTA, 8, Color(UiStyle.MAGENTA, 0.5))
+	_neon_label(errors_label, 17, UiStyle.TEXT, Color(UiStyle.MAGENTA.r, UiStyle.MAGENTA.g, UiStyle.MAGENTA.b, 0.55), 4, Color(UiStyle.MAGENTA, 0.3))
+	_neon_label(carried_label, 16, UiStyle.TEXT, Color(UiStyle.CYAN.r, UiStyle.CYAN.g, UiStyle.CYAN.b, 0.5), 4, Color(UiStyle.CYAN, 0.3))
+	_neon_label(message_label, 20, Color.WHITE, UiStyle.MAGENTA, 7, Color(UiStyle.CYAN, 0.5))
+	_neon_label(prompt_label, 19, UiStyle.CYAN_SOFT, Color(UiStyle.MAGENTA.r, UiStyle.MAGENTA.g, UiStyle.MAGENTA.b, 0.6), 5, Color(UiStyle.CYAN, 0.4))
+	var cross: Label = gameplay_root.get_node_or_null("Crosshair")
+	if cross:
+		_neon_label(cross, 22, Color.WHITE, UiStyle.MAGENTA, 6, Color(UiStyle.MAGENTA, 0.7))
+
+func _neon_label(label: Label, font_size: int, color: Color, outline: Color, outline_size: int, glow: Color) -> void:
+	if label == null:
+		return
+	label.add_theme_font_size_override("font_size", font_size)
+	label.add_theme_color_override("font_color", color)
+	label.add_theme_color_override("font_outline_color", outline)
+	label.add_theme_constant_override("font_outline_size", outline_size)
+	label.add_theme_color_override("font_shadow_color", glow)
+	label.add_theme_constant_override("shadow_outline_size", 8)
+	label.add_theme_constant_override("shadow_offset_x", 0)
+	label.add_theme_constant_override("shadow_offset_y", 0)
 
 func _process(delta: float) -> void:
 	var playing := Game.state == Game.State.PLAYING
 	gameplay_root.visible = playing
-	if playing:
-		timer_label.text = "Tiempo: %02d:%02d" % [int(Game.time_left) / 60, int(Game.time_left) % 60]
-		score_label.text = "Puntaje: %d" % Game.score
-		errors_label.text = "Errores: %d" % Game.errors
-		_show_carried()
-		if _msg_until > 0.0:
-			_msg_until -= delta
-			if _msg_until <= 0.0:
-				message_label.visible = false
+	_update_tutorial_ui()
+	if not playing:
+		return
+	if not Game.tutorial_mode:
+		var secs := int(Game.time_left)
+		if secs != _last_timer_secs:
+			_last_timer_secs = secs
+			timer_label.text = "Tiempo: %02d:%02d" % [secs / 60, secs % 60]
+		# Los bordes del reloj se ponen rojizos cuando se acaba el tiempo.
+		_update_timer_urgency()
+		if Game.score != _last_score:
+			if _last_score >= 0:
+				_flash_score(Game.score > _last_score)
+			_last_score = Game.score
+			score_label.text = "Puntaje: %d" % Game.score
+		if Game.errors != _last_errors:
+			_last_errors = Game.errors
+			errors_label.text = "Errores: %d" % Game.errors
+	_show_carried()
+	if _msg_until > 0.0:
+		_msg_until -= delta
+		if _msg_until <= 0.0:
+			message_label.visible = false
+
+# El puntaje "pita" visualmente: borde VERDE al sumar y ROJO al restar
+# (un destello corto y sobrio), con un pequeño salto de tamaño.
+func _flash_score(gain: bool) -> void:
+	var col := Color(0.3, 1.0, 0.5) if gain else Color(1.0, 0.26, 0.32)
+	if _score_tween and _score_tween.is_valid():
+		_score_tween.kill()
+	score_label.add_theme_color_override("font_color", Color.WHITE)
+	score_label.add_theme_color_override("font_outline_color", col)
+	score_label.add_theme_color_override("font_shadow_color", Color(col.r, col.g, col.b, 0.85))
+	if score_label.size.x <= 0.0:
+		_reset_score_style()
+		return
+	score_label.pivot_offset = score_label.size * 0.5
+	var pop := Vector2(1.14, 1.14) if gain else Vector2(1.08, 1.08)
+	_score_tween = score_label.create_tween()
+	_score_tween.tween_property(score_label, "scale", pop, 0.09) \
+		.set_trans(Tween.TRANS_BACK).set_ease(Tween.EASE_OUT)
+	_score_tween.tween_interval(0.3)
+	_score_tween.tween_property(score_label, "scale", Vector2.ONE, 0.18) \
+		.set_trans(Tween.TRANS_SINE).set_ease(Tween.EASE_IN_OUT)
+	_score_tween.tween_callback(_reset_score_style)
+
+func _reset_score_style() -> void:
+	if not is_instance_valid(score_label):
+		return
+	score_label.add_theme_color_override("font_color", UiStyle.CYAN_SOFT)
+	score_label.add_theme_color_override("font_outline_color", UiStyle.MAGENTA)
+	score_label.add_theme_color_override("font_shadow_color", Color(UiStyle.MAGENTA, 0.5))
+
+# Los bordes del cronómetro pasan de cian a ROJIZOS (y laten) según se
+# acaba el tiempo del nivel.
+func _update_timer_urgency() -> void:
+	var total := Game.level_time_total()
+	if total <= 0.0:
+		return
+	var ratio := clampf(Game.time_left / total, 0.0, 1.0)
+	var urgency := clampf(1.0 - ratio / 0.35, 0.0, 1.0)
+	var col := UiStyle.CYAN.lerp(Color(1.0, 0.3, 0.32), urgency)
+	if urgency > 0.01:
+		var pulse := 0.5 + 0.5 * sin(Time.get_ticks_msec() * 0.012 * (0.5 + urgency))
+		col = col.lerp(Color(1.0, 0.12, 0.18), 0.4 * urgency * pulse)
+	if col.is_equal_approx(_last_timer_outline):
+		return
+	_last_timer_outline = col
+	timer_label.add_theme_color_override("font_outline_color", col)
+	timer_label.add_theme_color_override("font_shadow_color", Color(col.r, col.g, col.b, 0.5 + 0.35 * urgency))
+	timer_label.add_theme_color_override("font_color", Color.WHITE.lerp(Color(1.0, 0.82, 0.82), urgency))
 
 func play_sfx(name: String) -> void:
 	var stream := _sfx_stream(name)
@@ -69,14 +181,39 @@ func show_message(text: String) -> void:
 	message_label.visible = true
 	_msg_until = 2.0
 
+# Inventario: avisa claramente cuándo llevas una pieza dañada (rojo
+# neón + ⚠) para que la vayas a botar a la papelera.
 func _show_carried() -> void:
-	if Game.carried_parts.is_empty():
-		carried_label.text = "Llevas: —"
-	else:
+	var text := "Llevas: —"
+	var damaged := Game.damaged_count()
+	if not Game.carried_parts.is_empty():
 		var names: Array = []
 		for part in Game.carried_parts:
-			names.append(part.name)
-		carried_label.text = "Llevas (%d/%d): %s" % [Game.carried_parts.size(), Game.MAX_CARRIED, ", ".join(names)]
+			if part.get("good", true):
+				names.append(part.name)
+			else:
+				names.append("⚠ %s [DAÑADA]" % part.name)
+		text = "Llevas (%d/%d): %s" % [Game.carried_parts.size(), Game.MAX_CARRIED, ", ".join(names)]
+	if text == _last_carried_text:
+		return
+	_last_carried_text = text
+	carried_label.text = text
+	carried_label.add_theme_color_override(
+		"font_color",
+		UiStyle.MAGENTA if damaged > 0 else UiStyle.TEXT
+	)
+
+# Papelera: se tiran todas las piezas dañadas que cargues.
+func throw_damaged() -> void:
+	var n := Game.trash_damaged()
+	_last_carried_text = ""
+	_show_carried()
+	if n == 0:
+		show_message("No llevas ninguna pieza dañada.")
+	elif n == 1:
+		show_message("Bottaste la pieza dañada. Mochila liberada.")
+	else:
+		show_message("Bottaste %d piezas dañadas. Mochila liberada." % n)
 
 func set_prompt(interactable: Node3D) -> void:
 	if interactable and interactable is Interactable:
@@ -101,14 +238,28 @@ func close_minigame() -> void:
 	Game.is_minigame_open = false
 
 func open_picker(part_type: String) -> void:
-	picker_title.text = "Estantería de %s — elige el modelo:" % Game.PART_TITLES.get(part_type, part_type)
+	var part_title: String = Game.PART_TITLES.get(part_type, part_type)
+	var variants: Array = Game.PART_VARIANTS[part_type]
+	var box_title := "Estantería de %s — elige el modelo:" % part_title
+	# En el tutorial la caja trae SOLO el repuesto exacto que pide esa PC.
+	if Game.tutorial_mode and Game.current_tasks.size() == 1:
+		var want: String = Game.current_tasks[0].get("variant", "")
+		var exact: Array = []
+		for v in variants:
+			if String(v.name) == want:
+				exact.append(v)
+		if not exact.is_empty():
+			variants = exact
+			box_title = "Caja de %s — repuesto exacto:" % part_title
+	picker_title.text = box_title
 	for child in picker_list.get_children():
 		child.free()
-	for variant in Game.PART_VARIANTS[part_type]:
+	for variant in variants:
 		var button := Button.new()
 		button.text = variant.name
 		button.pressed.connect(_on_variant_picked.bind(variant))
 		picker_list.add_child(button)
+		UiStyle.animate(button)
 	picker.visible = true
 	Game.is_minigame_open = true
 	_fix_picker_layout()
@@ -122,9 +273,18 @@ func close_picker() -> void:
 	picker.visible = false
 	Game.is_minigame_open = false
 
-func open_removal(part_type: String, on_done: Callable, reverse := false) -> void:
+# ESC cierra el menú que esté encima: primero los paneles pequeños y la PC al final.
+func close_top_menu() -> void:
+	if removal_panel.visible:
+		_on_removal_cancel()
+	elif picker.visible:
+		close_picker()
+	elif minigame.visible:
+		close_minigame()
+
+func open_removal(part_type: String, on_done: Callable, reverse := false, mode := "") -> void:
 	_removal_cb = on_done
-	removal_panel.open(part_type, reverse)
+	removal_panel.open(part_type, reverse, mode)
 	removal_panel.visible = true
 	_fix_removal_layout()
 
@@ -148,44 +308,207 @@ func _fix_picker_layout() -> void:
 	picker.set_anchors_and_offsets_preset(Control.PRESET_CENTER)
 
 func _on_game_started() -> void:
+	_last_carried_text = ""
+	_last_timer_secs = -1
+	_last_score = -1
+	_last_errors = -1
 	_show_carried()
 	errors_label.text = "Errores: %d" % Game.errors
-	_show_level_tutorial()
-
-func _show_level_tutorial() -> void:
-	Game.tutorial_active = true
-	_tut_pages = Game.TUTORIAL_PAGES.duplicate()
-	_tut_pages.insert(0, "NIVEL %d\n\n%s" % [Game.current_level, Game.tutorial_level_text()])
-	_tut_page = 0
-	_render_tutorial_page()
-	tutorial_overlay.visible = true
-	await get_tree().process_frame
-	if tutorial_continue:
-		tutorial_continue.grab_focus()
-
-func _render_tutorial_page() -> void:
-	tutorial_text.text = _tut_pages[_tut_page]
-	tutorial_page_label.text = "Página %d/%d" % [_tut_page + 1, _tut_pages.size()]
-	tutorial_prev.disabled = _tut_page == 0
-	tutorial_next.disabled = _tut_page >= _tut_pages.size() - 1
-	tutorial_continue.visible = _tut_page == _tut_pages.size() - 1
-
-func _prev_tutorial_page() -> void:
-	_tut_page = maxi(0, _tut_page - 1)
-	_render_tutorial_page()
-
-func _next_tutorial_page() -> void:
-	_tut_page = mini(_tut_pages.size() - 1, _tut_page + 1)
-	_render_tutorial_page()
-
-func _end_tutorial() -> void:
-	Game.tutorial_active = false
-	tutorial_overlay.visible = false
-	Game.set_tutorial_seen(true)
-
-func _skip_tutorial() -> void:
-	Game.tutorial_active = false
-	tutorial_overlay.visible = false
+	if Game.tutorial_mode:
+		_show_tutorial_intro()
+	# El nivel con cronómetro ya no arranca con explicación: esa información
+	# vive ahora en el menú de la sección (ficha de la derecha).
 
 func _on_repair(_pc_id: int) -> void:
 	_show_carried()
+
+# ------------------------------------------------------------------
+# Modo tutorial: habitación pequeña, sin cronómetro.
+# ------------------------------------------------------------------
+func _build_tutorial_ui() -> void:
+	tut_header = Label.new()
+	tut_header.name = "TutorialHeader"
+	add_child(tut_header)
+	tut_header.set_anchors_and_offsets_preset(Control.PRESET_CENTER_TOP)
+	tut_header.offset_left = -320.0
+	tut_header.offset_right = 320.0
+	tut_header.offset_top = 10.0
+	tut_header.offset_bottom = 46.0
+	tut_header.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+	tut_header.add_theme_font_size_override("font_size", 24)
+	tut_header.add_theme_color_override("font_color", UiStyle.CYAN)
+	tut_header.visible = false
+
+	# Abajo a la izquierda: arriba estorba.
+	tut_exit_button = Button.new()
+	tut_exit_button.name = "TutorialExit"
+	add_child(tut_exit_button)
+	tut_exit_button.set_anchors_and_offsets_preset(Control.PRESET_BOTTOM_LEFT)
+	tut_exit_button.offset_left = 16.0
+	tut_exit_button.offset_right = 236.0
+	tut_exit_button.offset_top = -58.0
+	tut_exit_button.offset_bottom = -16.0
+	tut_exit_button.text = "VOLVER AL MENÚ"
+	tut_exit_button.add_theme_font_size_override("font_size", 16)
+	tut_exit_button.visible = false
+	tut_exit_button.pressed.connect(_exit_tutorial)
+
+	tut_intro = ColorRect.new()
+	tut_intro.name = "TutorialIntro"
+	add_child(tut_intro)
+	tut_intro.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
+	tut_intro.color = Color(0, 0, 0, 0.88)
+	tut_intro.visible = false
+	_build_tutorial_intro()
+	_build_tutorial_complete()
+
+func _build_tutorial_intro() -> void:
+	var center := CenterContainer.new()
+	tut_intro.add_child(center)
+	center.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
+	var box := VBoxContainer.new()
+	box.custom_minimum_size = Vector2(640, 0)
+	box.add_theme_constant_override("separation", 28)
+	center.add_child(box)
+
+	tut_intro_title = Label.new()
+	tut_intro_title.name = "IntroTitle"
+	tut_intro_title.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+	tut_intro_title.add_theme_font_size_override("font_size", 44)
+	box.add_child(tut_intro_title)
+
+	tut_intro_body = RichTextLabel.new()
+	tut_intro_body.bbcode_enabled = true
+	tut_intro_body.custom_minimum_size = Vector2(640, 280)
+	tut_intro_body.add_theme_font_size_override("font_size", 17)
+	box.add_child(tut_intro_body)
+
+	var hint := Label.new()
+	hint.text = "Recorre la habitación, examina la PC y lleva el repuesto al slot dañado.\nSin cronómetro: puedes practicar las veces que quieras."
+	hint.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+	hint.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
+	hint.add_theme_font_size_override("font_size", 15)
+	box.add_child(hint)
+
+	var nav := HBoxContainer.new()
+	nav.alignment = BoxContainer.ALIGNMENT_CENTER
+	nav.add_theme_constant_override("separation", 24)
+	box.add_child(nav)
+
+	tut_intro_start = Button.new()
+	tut_intro_start.text = "EMPEZAR"
+	tut_intro_start.custom_minimum_size = Vector2(220, 54)
+	tut_intro_start.add_theme_font_size_override("font_size", 22)
+	tut_intro_start.pressed.connect(_start_practice)
+	nav.add_child(tut_intro_start)
+
+	tut_intro_back = Button.new()
+	tut_intro_back.text = "VOLVER"
+	tut_intro_back.custom_minimum_size = Vector2(180, 54)
+	tut_intro_back.add_theme_font_size_override("font_size", 22)
+	tut_intro_back.pressed.connect(_exit_tutorial)
+	nav.add_child(tut_intro_back)
+
+func _build_tutorial_complete() -> void:
+	tut_complete = CenterContainer.new()
+	tut_complete.name = "TutorialComplete"
+	add_child(tut_complete)
+	tut_complete.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
+	tut_complete.visible = false
+
+	var panel := HoloCard.new()
+	panel.custom_minimum_size = Vector2(520, 0)
+	tut_complete.add_child(panel)
+
+	var box := VBoxContainer.new()
+	box.add_theme_constant_override("separation", 28)
+	panel.add_child(box)
+
+	var title := Label.new()
+	title.name = "CompleteTitle"
+	title.text = "TUTORIAL TERMINADO"
+	title.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+	title.add_theme_font_size_override("font_size", 30)
+	box.add_child(title)
+
+	tut_complete_text = Label.new()
+	tut_complete_text.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+	tut_complete_text.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
+	tut_complete_text.custom_minimum_size = Vector2(460, 0)
+	box.add_child(tut_complete_text)
+
+	var nav := HBoxContainer.new()
+	nav.alignment = BoxContainer.ALIGNMENT_CENTER
+	nav.add_theme_constant_override("separation", 24)
+	box.add_child(nav)
+
+	tut_repeat_button = Button.new()
+	tut_repeat_button.text = "VOLVER A JUGAR"
+	tut_repeat_button.custom_minimum_size = Vector2(300, 52)
+	tut_repeat_button.add_theme_font_size_override("font_size", 20)
+	tut_repeat_button.pressed.connect(_repeat_tutorial)
+	nav.add_child(tut_repeat_button)
+
+	tut_complete_exit = Button.new()
+	tut_complete_exit.text = "REGRESAR AL MENÚ DE SELECCIÓN DE NIVEL"
+	tut_complete_exit.custom_minimum_size = Vector2(500, 52)
+	tut_complete_exit.add_theme_font_size_override("font_size", 18)
+	tut_complete_exit.pressed.connect(_exit_tutorial)
+	nav.add_child(tut_complete_exit)
+
+func _update_tutorial_ui() -> void:
+	var on := Game.tutorial_mode
+	timer_label.visible = not on
+	score_label.visible = not on
+	errors_label.visible = not on
+	tut_header.visible = on
+	tut_exit_button.visible = on
+	if not on:
+		if _tut_part_shown != "":
+			_tut_part_shown = ""
+		return
+	if _tut_part_shown == Game.tutorial_part:
+		return
+	_tut_part_shown = Game.tutorial_part
+	tut_header.text = "TUTORIAL: %s" % Game.PART_TITLES.get(Game.tutorial_part, "").to_upper()
+
+# Al entrar al tutorial se muestra el contexto: para qué sirve la pieza y qué falla.
+func _show_tutorial_intro() -> void:
+	Game.tutorial_active = true
+	tut_complete.visible = false
+	tut_intro_title.text = "TUTORIAL: %s" % Game.PART_TITLES.get(Game.tutorial_part, "").to_upper()
+	tut_intro_body.text = Game.part_info_text(Game.tutorial_part)
+	tut_intro.visible = true
+	UiStyle.fade_in(tut_intro)
+	tut_intro_start.grab_focus.call_deferred()
+
+func _start_practice() -> void:
+	Game.tutorial_active = false
+	tut_intro.visible = false
+
+func _exit_tutorial() -> void:
+	Game.tutorial_active = false
+	tut_intro.visible = false
+	tut_complete.visible = false
+	Game.finish_tutorial()
+
+func _repeat_tutorial() -> void:
+	Game.tutorial_active = false
+	tut_complete.visible = false
+	Game.start_tutorial(Game.tutorial_part)
+
+func _on_tutorial_finished() -> void:
+	var title: String = Game.PART_TITLES.get(Game.tutorial_part, "la pieza")
+	Game.tutorial_active = true
+	# La pantalla de "tutorial terminado" queda sola, sin la PC encima.
+	close_minigame()
+	tut_complete_text.text = "Reparaste la %s correctamente. Practica de nuevo o vuelve al menú." % title
+	tut_complete.visible = true
+	UiStyle.fade_in(tut_complete)
+	tut_repeat_button.grab_focus.call_deferred()
+
+func _on_tutorial_exited() -> void:
+	Game.tutorial_active = false
+	tut_intro.visible = false
+	tut_complete.visible = false
+	_tut_part_shown = ""

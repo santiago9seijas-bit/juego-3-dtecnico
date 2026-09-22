@@ -1,13 +1,7 @@
 [gd_scene load_steps=3 format=3]
 
 [ext_resource type="Script" path="res://scenes/ui/main_menu.gd" id="1_menu"]
-
-[sub_resource type="StyleBoxFlat" id="StyleBoxFlat_btn"]
-bg_color = Color(0.2, 0.5, 0.3, 1)
-corner_radius_top_left = 10
-corner_radius_top_right = 10
-corner_radius_bottom_right = 10
-corner_radius_bottom_left = 10
+[ext_resource type="Script" path="res://scripts/holo_title.gd" id="2_holo"]
 
 [node name="MainMenu" type="Control"]
 anchors_preset = 15
@@ -23,7 +17,7 @@ anchor_right = 1.0
 anchor_bottom = 1.0
 grow_horizontal = 2
 grow_vertical = 2
-color = Color(0.07, 0.08, 0.12, 0.85)
+color = Color(0.02, 0.03, 0.05, 0.94)
 
 [node name="VolumeBox" type="VBoxContainer" parent="."]
 unique_name_in_owner = true
@@ -35,7 +29,7 @@ offset_top = -96.0
 offset_right = 280.0
 offset_bottom = -24.0
 grow_vertical = 0
-theme_override_constants/separation = 6
+theme_override_constants/separation = 10
 
 [node name="VolumeLabel" type="Label" parent="VolumeBox"]
 theme_override_font_sizes/font_size = 16
@@ -57,48 +51,37 @@ grow_horizontal = 2
 grow_vertical = 2
 
 [node name="VBox" type="VBoxContainer" parent="MainScreen"]
-theme_override_constants/separation = 18
+theme_override_constants/separation = 30
 
-[node name="TitleLabel" type="Label" parent="MainScreen/VBox"]
+[node name="TitleLabel" type="Control" parent="MainScreen/VBox"]
 unique_name_in_owner = true
-theme_override_font_sizes/font_size = 46
+custom_minimum_size = Vector2(1120, 124)
+script = ExtResource("2_holo")
 text = "TECNICO DE COMPUTADORAS"
-horizontal_alignment = 1
+font_size = 66
 
 [node name="PlayButton" type="Button" parent="MainScreen/VBox"]
 unique_name_in_owner = true
 custom_minimum_size = Vector2(300, 56)
 theme_override_font_sizes/font_size = 22
-theme_override_styles/normal = SubResource("StyleBoxFlat_btn")
-theme_override_styles/hover = SubResource("StyleBoxFlat_btn")
-theme_override_styles/pressed = SubResource("StyleBoxFlat_btn")
 text = "JUGAR"
 
 [node name="ControlsButton" type="Button" parent="MainScreen/VBox"]
 unique_name_in_owner = true
 custom_minimum_size = Vector2(300, 56)
 theme_override_font_sizes/font_size = 22
-theme_override_styles/normal = SubResource("StyleBoxFlat_btn")
-theme_override_styles/hover = SubResource("StyleBoxFlat_btn")
-theme_override_styles/pressed = SubResource("StyleBoxFlat_btn")
 text = "CONTROLES"
 
 [node name="TutorialsButton" type="Button" parent="MainScreen/VBox"]
 unique_name_in_owner = true
 custom_minimum_size = Vector2(300, 56)
 theme_override_font_sizes/font_size = 22
-theme_override_styles/normal = SubResource("StyleBoxFlat_btn")
-theme_override_styles/hover = SubResource("StyleBoxFlat_btn")
-theme_override_styles/pressed = SubResource("StyleBoxFlat_btn")
 text = "TUTORIALES"
 
 [node name="ExitButton" type="Button" parent="MainScreen/VBox"]
 unique_name_in_owner = true
 custom_minimum_size = Vector2(300, 56)
 theme_override_font_sizes/font_size = 22
-theme_override_styles/normal = SubResource("StyleBoxFlat_btn")
-theme_override_styles/hover = SubResource("StyleBoxFlat_btn")
-theme_override_styles/pressed = SubResource("StyleBoxFlat_btn")
 text = "SALIR"
 
 [node name="TutorialScreen" type="CenterContainer" parent="."]
@@ -114,19 +97,44 @@ grow_vertical = 2
 theme_override_constants/separation = 14
 
 [node name="TutorialTitle" type="Label" parent="TutorialScreen/VBox"]
-theme_override_font_sizes/font_size = 34
-text = "TUTORIALES"
+unique_name_in_owner = true
+theme_override_font_sizes/font_size = 38
+text = "MANUAL DEL TÉCNICO"
+horizontal_alignment = 1
+
+[node name="TutorialSubtitle" type="Label" parent="TutorialScreen/VBox"]
+unique_name_in_owner = true
+theme_override_font_sizes/font_size = 15
+text = "GUIA RAPIDA · 6 LECCIONES CORTAS · SIN CRONOMETRO"
 horizontal_alignment = 1
 
 [node name="TutorialText" type="RichTextLabel" parent="TutorialScreen/VBox"]
 unique_name_in_owner = true
-custom_minimum_size = Vector2(560, 320)
-theme_override_font_sizes/font_size = 18
+custom_minimum_size = Vector2(660, 262)
+theme_override_font_sizes/font_size = 17
+bbcode_enabled = true
+autowrap_mode = 3
+
+[node name="TutorialProgress" type="ProgressBar" parent="TutorialScreen/VBox"]
+unique_name_in_owner = true
+custom_minimum_size = Vector2(660, 10)
+max_value = 6.0
+value = 1.0
+show_percentage = false
+
+[node name="TutorialDots" type="RichTextLabel" parent="TutorialScreen/VBox"]
+unique_name_in_owner = true
+custom_minimum_size = Vector2(660, 22)
+theme_override_font_sizes/font_size = 15
+bbcode_enabled = true
+fit_content = true
+text = "● ● ● ● ● ●"
+horizontal_alignment = 1
 
 [node name="TutorialPageLabel" type="Label" parent="TutorialScreen/VBox"]
 unique_name_in_owner = true
-theme_override_font_sizes/font_size = 16
-text = "Página 1/6"
+theme_override_font_sizes/font_size = 15
+text = "PÁGINA 1/6"
 horizontal_alignment = 1
 
 [node name="TutorialNav" type="HBoxContainer" parent="TutorialScreen/VBox"]
@@ -135,15 +143,15 @@ theme_override_constants/separation = 16
 
 [node name="TutorialPrev" type="Button" parent="TutorialScreen/VBox/TutorialNav"]
 unique_name_in_owner = true
-custom_minimum_size = Vector2(140, 40)
+custom_minimum_size = Vector2(170, 40)
 theme_override_font_sizes/font_size = 16
-text = "ANTERIOR"
+text = "◀  ANTERIOR"
 
 [node name="TutorialNext" type="Button" parent="TutorialScreen/VBox/TutorialNav"]
 unique_name_in_owner = true
-custom_minimum_size = Vector2(140, 40)
+custom_minimum_size = Vector2(170, 40)
 theme_override_font_sizes/font_size = 16
-text = "SIGUIENTE"
+text = "SIGUIENTE  ▶"
 
 [node name="TutorialBackButton" type="Button" parent="TutorialScreen/VBox"]
 unique_name_in_owner = true
@@ -161,43 +169,199 @@ grow_horizontal = 2
 grow_vertical = 2
 
 [node name="VBox" type="VBoxContainer" parent="LevelScreen"]
-theme_override_constants/separation = 16
+theme_override_constants/separation = 30
 
 [node name="LevelTitle" type="Label" parent="LevelScreen/VBox"]
 theme_override_font_sizes/font_size = 34
-text = "SELECCIONA NIVEL"
+text = "SELECCIONA SECCIÓN"
 horizontal_alignment = 1
 
 [node name="Level1Button" type="Button" parent="LevelScreen/VBox"]
 unique_name_in_owner = true
-custom_minimum_size = Vector2(300, 56)
-theme_override_font_sizes/font_size = 22
-theme_override_styles/normal = SubResource("StyleBoxFlat_btn")
-theme_override_styles/hover = SubResource("StyleBoxFlat_btn")
-theme_override_styles/pressed = SubResource("StyleBoxFlat_btn")
-text = "NIVEL 1"
+custom_minimum_size = Vector2(520, 56)
+theme_override_font_sizes/font_size = 20
+text = "SECCIÓN DE REPARACIÓN"
 
 [node name="Level2Button" type="Button" parent="LevelScreen/VBox"]
 unique_name_in_owner = true
-custom_minimum_size = Vector2(300, 56)
-theme_override_font_sizes/font_size = 22
-theme_override_styles/normal = SubResource("StyleBoxFlat_btn")
-theme_override_styles/hover = SubResource("StyleBoxFlat_btn")
-theme_override_styles/pressed = SubResource("StyleBoxFlat_btn")
-text = "NIVEL 2"
+custom_minimum_size = Vector2(520, 56)
+theme_override_font_sizes/font_size = 20
+text = "SECCIÓN DE SOFTWARE"
 
 [node name="Level3Button" type="Button" parent="LevelScreen/VBox"]
 unique_name_in_owner = true
-custom_minimum_size = Vector2(300, 56)
-theme_override_font_sizes/font_size = 22
-theme_override_styles/normal = SubResource("StyleBoxFlat_btn")
-theme_override_styles/hover = SubResource("StyleBoxFlat_btn")
-theme_override_styles/pressed = SubResource("StyleBoxFlat_btn")
-text = "NIVEL 3"
+custom_minimum_size = Vector2(520, 56)
+theme_override_font_sizes/font_size = 20
+text = "SECCIÓN DE SERVIDORES"
 
 [node name="LevelBackButton" type="Button" parent="LevelScreen/VBox"]
 unique_name_in_owner = true
 custom_minimum_size = Vector2(300, 46)
+theme_override_font_sizes/font_size = 18
+text = "VOLVER"
+
+[node name="TutorialOptionsScreen" type="CenterContainer" parent="."]
+unique_name_in_owner = true
+visible = false
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
+
+[node name="VBox" type="VBoxContainer" parent="TutorialOptionsScreen"]
+theme_override_constants/separation = 22
+
+[node name="SectionTitle" type="Label" parent="TutorialOptionsScreen/VBox"]
+theme_override_font_sizes/font_size = 32
+text = "SECCIÓN DE REPARACIÓN"
+horizontal_alignment = 1
+
+[node name="SectionTutorialsButton" type="Button" parent="TutorialOptionsScreen/VBox"]
+unique_name_in_owner = true
+custom_minimum_size = Vector2(520, 56)
+theme_override_font_sizes/font_size = 22
+text = "TUTORIALES"
+
+[node name="SectionLevel1Button" type="Button" parent="TutorialOptionsScreen/VBox"]
+unique_name_in_owner = true
+custom_minimum_size = Vector2(520, 46)
+theme_override_font_sizes/font_size = 18
+text = "NIVEL 1"
+
+[node name="SectionLevel2Button" type="Button" parent="TutorialOptionsScreen/VBox"]
+unique_name_in_owner = true
+custom_minimum_size = Vector2(520, 46)
+theme_override_font_sizes/font_size = 18
+text = "NIVEL 2"
+
+[node name="SectionLevel3Button" type="Button" parent="TutorialOptionsScreen/VBox"]
+unique_name_in_owner = true
+custom_minimum_size = Vector2(520, 46)
+theme_override_font_sizes/font_size = 18
+text = "NIVEL 3"
+
+[node name="SectionLevel4Button" type="Button" parent="TutorialOptionsScreen/VBox"]
+unique_name_in_owner = true
+custom_minimum_size = Vector2(520, 46)
+theme_override_font_sizes/font_size = 18
+text = "NIVEL 4"
+
+[node name="SectionLevel5Button" type="Button" parent="TutorialOptionsScreen/VBox"]
+unique_name_in_owner = true
+custom_minimum_size = Vector2(520, 46)
+theme_override_font_sizes/font_size = 18
+text = "NIVEL 5"
+
+[node name="SectionLevel6Button" type="Button" parent="TutorialOptionsScreen/VBox"]
+unique_name_in_owner = true
+custom_minimum_size = Vector2(520, 46)
+theme_override_font_sizes/font_size = 18
+text = "NIVEL 6"
+
+[node name="TutorialOptionsBackButton" type="Button" parent="TutorialOptionsScreen/VBox"]
+unique_name_in_owner = true
+custom_minimum_size = Vector2(520, 44)
+theme_override_font_sizes/font_size = 18
+text = "VOLVER"
+
+[node name="TutorialsPickScreen" type="CenterContainer" parent="."]
+unique_name_in_owner = true
+visible = false
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
+
+[node name="VBox" type="VBoxContainer" parent="TutorialsPickScreen"]
+theme_override_constants/separation = 14
+
+[node name="PickTitle" type="Label" parent="TutorialsPickScreen/VBox"]
+theme_override_font_sizes/font_size = 32
+text = "TUTORIALES"
+horizontal_alignment = 1
+
+[node name="SectionHint" type="Label" parent="TutorialsPickScreen/VBox"]
+theme_override_font_sizes/font_size = 14
+text = "Piezas y mecánicas del taller: cada una en su habitación, sin cronómetro."
+horizontal_alignment = 1
+
+[node name="TutorialsList" type="VBoxContainer" parent="TutorialsPickScreen/VBox"]
+theme_override_constants/separation = 12
+
+[node name="TutRamButton" type="Button" parent="TutorialsPickScreen/VBox/TutorialsList"]
+unique_name_in_owner = true
+custom_minimum_size = Vector2(520, 38)
+theme_override_font_sizes/font_size = 17
+text = "TUTORIAL: RAM"
+
+[node name="TutHddButton" type="Button" parent="TutorialsPickScreen/VBox/TutorialsList"]
+unique_name_in_owner = true
+custom_minimum_size = Vector2(520, 38)
+theme_override_font_sizes/font_size = 17
+text = "TUTORIAL: DISCO DURO"
+
+[node name="TutPsuButton" type="Button" parent="TutorialsPickScreen/VBox/TutorialsList"]
+unique_name_in_owner = true
+custom_minimum_size = Vector2(520, 38)
+theme_override_font_sizes/font_size = 17
+text = "TUTORIAL: FUENTE"
+
+[node name="TutGpuButton" type="Button" parent="TutorialsPickScreen/VBox/TutorialsList"]
+unique_name_in_owner = true
+custom_minimum_size = Vector2(520, 38)
+theme_override_font_sizes/font_size = 17
+text = "TUTORIAL: GRÁFICA"
+
+[node name="TutMbButton" type="Button" parent="TutorialsPickScreen/VBox/TutorialsList"]
+unique_name_in_owner = true
+custom_minimum_size = Vector2(520, 38)
+theme_override_font_sizes/font_size = 17
+text = "TUTORIAL: PLACA MADRE"
+
+[node name="TutCpuButton" type="Button" parent="TutorialsPickScreen/VBox/TutorialsList"]
+unique_name_in_owner = true
+custom_minimum_size = Vector2(520, 38)
+theme_override_font_sizes/font_size = 17
+text = "TUTORIAL: PROCESADOR"
+
+[node name="TutFanButton" type="Button" parent="TutorialsPickScreen/VBox/TutorialsList"]
+unique_name_in_owner = true
+custom_minimum_size = Vector2(520, 38)
+theme_override_font_sizes/font_size = 17
+text = "TUTORIAL: FANCOOLER"
+
+[node name="MechanicsHeader" type="Label" parent="TutorialsPickScreen/VBox"]
+theme_override_font_sizes/font_size = 15
+theme_override_colors/font_color = Color(0.1, 0.9, 1, 1)
+text = "MECÁNICAS DEL TALLER: VOLTMETRO · CAUTÍN · PAPELERA"
+horizontal_alignment = 1
+
+[node name="MechanicsRow" type="HBoxContainer" parent="TutorialsPickScreen/VBox"]
+theme_override_constants/separation = 10
+
+[node name="TutVoltButton" type="Button" parent="TutorialsPickScreen/VBox/MechanicsRow"]
+unique_name_in_owner = true
+custom_minimum_size = Vector2(166, 40)
+theme_override_font_sizes/font_size = 16
+text = "VOLTMETRO"
+
+[node name="TutSolderButton" type="Button" parent="TutorialsPickScreen/VBox/MechanicsRow"]
+unique_name_in_owner = true
+custom_minimum_size = Vector2(166, 40)
+theme_override_font_sizes/font_size = 16
+text = "CAUTÍN"
+
+[node name="TutTrashButton" type="Button" parent="TutorialsPickScreen/VBox/MechanicsRow"]
+unique_name_in_owner = true
+custom_minimum_size = Vector2(166, 40)
+theme_override_font_sizes/font_size = 16
+text = "PAPELERA"
+
+[node name="TutorialsPickBackButton" type="Button" parent="TutorialsPickScreen/VBox"]
+unique_name_in_owner = true
+custom_minimum_size = Vector2(520, 40)
 theme_override_font_sizes/font_size = 18
 text = "VOLVER"
 
@@ -211,7 +375,7 @@ grow_horizontal = 2
 grow_vertical = 2
 
 [node name="VBox" type="VBoxContainer" parent="ControlsScreen"]
-theme_override_constants/separation = 14
+theme_override_constants/separation = 26
 
 [node name="ControlsTitle" type="Label" parent="ControlsScreen/VBox"]
 theme_override_font_sizes/font_size = 34
@@ -259,7 +423,7 @@ grow_horizontal = 2
 grow_vertical = 2
 
 [node name="VBox" type="VBoxContainer" parent="PauseScreen"]
-theme_override_constants/separation = 16
+theme_override_constants/separation = 30
 
 [node name="PauseTitle" type="Label" parent="PauseScreen/VBox"]
 theme_override_font_sizes/font_size = 38
@@ -276,18 +440,12 @@ horizontal_alignment = 1
 unique_name_in_owner = true
 custom_minimum_size = Vector2(300, 56)
 theme_override_font_sizes/font_size = 22
-theme_override_styles/normal = SubResource("StyleBoxFlat_btn")
-theme_override_styles/hover = SubResource("StyleBoxFlat_btn")
-theme_override_styles/pressed = SubResource("StyleBoxFlat_btn")
 text = "REANUDAR"
 
 [node name="RestartButton" type="Button" parent="PauseScreen/VBox"]
 unique_name_in_owner = true
 custom_minimum_size = Vector2(300, 56)
 theme_override_font_sizes/font_size = 22
-theme_override_styles/normal = SubResource("StyleBoxFlat_btn")
-theme_override_styles/hover = SubResource("StyleBoxFlat_btn")
-theme_override_styles/pressed = SubResource("StyleBoxFlat_btn")
 text = "REINICIAR"
 
 [node name="PauseMenuButton" type="Button" parent="PauseScreen/VBox"]
@@ -306,7 +464,7 @@ grow_horizontal = 2
 grow_vertical = 2
 
 [node name="VBox" type="VBoxContainer" parent="FinishScreen"]
-theme_override_constants/separation = 16
+theme_override_constants/separation = 30
 
 [node name="FinishTitle" type="Label" parent="FinishScreen/VBox"]
 unique_name_in_owner = true
@@ -331,18 +489,12 @@ unique_name_in_owner = true
 visible = false
 custom_minimum_size = Vector2(300, 56)
 theme_override_font_sizes/font_size = 22
-theme_override_styles/normal = SubResource("StyleBoxFlat_btn")
-theme_override_styles/hover = SubResource("StyleBoxFlat_btn")
-theme_override_styles/pressed = SubResource("StyleBoxFlat_btn")
 text = "SIGUIENTE NIVEL"
 
 [node name="ReplayButton" type="Button" parent="FinishScreen/VBox"]
 unique_name_in_owner = true
 custom_minimum_size = Vector2(300, 56)
 theme_override_font_sizes/font_size = 22
-theme_override_styles/normal = SubResource("StyleBoxFlat_btn")
-theme_override_styles/hover = SubResource("StyleBoxFlat_btn")
-theme_override_styles/pressed = SubResource("StyleBoxFlat_btn")
 text = "JUGAR DE NUEVO"
 
 [node name="FinishMenuButton" type="Button" parent="FinishScreen/VBox"]

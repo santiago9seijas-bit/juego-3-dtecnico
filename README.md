@@ -32,7 +32,7 @@ Desarrollado en **Godot Engine 4** con **GDScript**, y modelos/escenarios realiz
 
 ```
 juego-3-dtecnico/
-├── project.godot            # Configuración del proyecto Godot 4
+├── project.godot            # Configuración del proyecto Godot 4 (versión 0.2)
 ├── icon.svg                 # Ícono del juego
 ├── scenes/
 │   ├── main.tscn            # Escena principal (nivel)
@@ -43,9 +43,41 @@ juego-3-dtecnico/
 │   └── ui/                  # HUD, menú principal, pausa, tutorial
 ├── scripts/
 │   ├── game.gd              # Lógica central del juego (autoload)
-│   └── interactable.gd      # Base para objetos interactuables
+│   ├── interactable.gd      # Base para objetos interactuables
+│   ├── holo_title.gd        # Título de neón con glitch (HoloTitle)
+│   ├── holo_card.gd         # Tarjeta holográfica de los menús (HoloCard)
+│   ├── orbit_menu.gd        # Menú en arco alrededor del agujero negro (OrbitMenu)
+│   ├── trash_bin.gd         # Papelera para botar piezas dañadas (TrashBin)
+│   └── ui_style.gd          # Look ciberpunk compartido (UiStyle)
+├── shaders/
+│   └── menu_grid.gdshader   # Retícula técnica de fondo de los menús
+├── versions/
+│   ├── CHANGELOG.md         # Historial de versiones (0.1, 0.2)
+│   ├── linux-version/       # Builds de Linux por versión
+│   └── windows-version/     # Builds de Windows por versión
 └── tests/                   # Pruebas automatizadas de escenas y lógica
 ```
+
+## Versiones
+
+Historial completo y notas de cada versión en **[versions/CHANGELOG.md](versions/CHANGELOG.md)**.
+
+| Versión | Plataforma | Archivo | Fecha |
+|---------|------------|---------|-------|
+| **0.2** | Linux x86_64 | [versions/linux-version/0.2.zip](versions/linux-version/0.2.zip) | 2026-09-22 |
+| **0.2** | Windows x86_64 | [versions/windows-version/0.2.zip](versions/windows-version/0.2.zip) | 2026-09-22 |
+
+Cómo jugar una build descargada:
+
+1. Descarga el ZIP de tu plataforma y descomprímelo.
+2. **Linux:** dale permiso de ejecución y ábrelo:
+   ```bash
+   unzip 0.2.zip && chmod +x juego_3d_tecnico.x86_64 && ./juego_3d_tecnico.x86_64
+   ```
+   (o doble clic en el archivo si tu escritorio lo permite)
+3. **Windows:** descomprime y haz doble clic en `juego_3d_tecnico.exe`.
+
+Ambos ejecutables traen el `.pck` embebido: no necesitan archivos extra.
 
 ## Requisitos
 
@@ -56,7 +88,7 @@ juego-3-dtecnico/
 
 1. Clona el repositorio:
    ```bash
-   git clone https://github.com/TU_USUARIO/juego-3-dtecnico.git
+   git clone git@github.com:santiago9seijas-bit/juego-3-dtecnico.git
    ```
 2. Abre Godot Engine.
 3. Importa el proyecto: selecciona `project.godot`.

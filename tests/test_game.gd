@@ -15,8 +15,7 @@ func _ready() -> void:
 	_check(Game.score == 0, "score inicia en 0")
 	_check(Game.time_left == Game.LEVELS[0].time, "timer arranca al maximo")
 
-	Game.hud._end_tutorial()
-	_check(Game.tutorial_active == false, "el tutorial se cierra al darle Continuar")
+	_check(Game.tutorial_active == false, "el nivel arranca sin explicacion (ya no se muestra)")
 
 	await get_tree().create_timer(0.1).timeout
 	_check(Game.time_left < Game.LEVELS[0].time, "el cronometro DESCIENDE")
@@ -29,18 +28,12 @@ func _ready() -> void:
 	Game.resume_game()
 	_check(Game.state == Game.State.PLAYING, "resume_game vuelve a PLAYING")
 
-	_check(Game.task_count == 9, "nivel 1 tiene 9 PCs")
+	_check(Game.task_count == 3, "nivel 1 tiene 3 PCs")
 
 	var pcs := {
 		1: "psu",
 		2: "ram",
 		3: "hdd",
-		4: "gpu",
-		5: "mb",
-		6: "psu",
-		7: "ram",
-		8: "hdd",
-		9: "gpu",
 	}
 	for pc_id in pcs:
 		var pc: Node = load("res://scenes/pc/pc.tscn").instantiate()
@@ -50,14 +43,17 @@ func _ready() -> void:
 		main.add_child(pc)
 		minigame.setup(pc)
 		var slot: RepairSlot = minigame._slot_nodes[pcs[pc_id]]
-		Game.carried_parts.append(Game.PART_VARIANTS[pcs[pc_id]][0])
-		minigame._on_part_dropped(slot, Game.carried_parts[0])
+		# Cargamos el repuesto bueno y lo soltamos al slot: la mochila ya
+		# puede tener piezas dañadas de la PC anterior (por eso no se usa [0]).
+		_check(Game.pick_part_variant(Game.PART_VARIANTS[pcs[pc_id]][0]), "se toma el repuesto de la estanteria")
+		minigame._on_part_dropped(slot, Game.carried_parts.back())
 		Game.hud._on_removal_done()
 
-	_check(Game.repaired.size() == 9, "9 PCs reparados")
-	_check(Game.score == Game.POINTS_PER_TASK * 9, "puntaje 900")
+	_check(Game.repaired.size() == 3, "3 PCs reparados")
+	_check(Game.score == Game.POINTS_PER_TASK * 3, "puntaje de los 3 PCs")
 	_check(Game.state == Game.State.DONE, "reparar todas termina la partida")
 	_check(Game.time_left >= Game.LEVELS[0].time - 1.0, "las reparaciones sumaron tiempo")
+	_check(Game.damaged_count() == 3, "las 3 piezas salidas quedan marcadas como dañadas en la mochila")
 
 	if failures == 0:
 		print("TEST: PARTIDA OK")

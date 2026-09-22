@@ -11,8 +11,13 @@ var gravity: float = ProjectSettings.get_setting("physics/3d/default_gravity")
 
 var current_interactable: Node3D = null
 
+# En cualquier menú del juego (PC, estantería de repuestos, pausa o tutorial)
+# la cámara queda bloqueada: solo se mueve el mouse.
+func _menu_open() -> bool:
+	return Game.state != Game.State.PLAYING or Game.tutorial_active or Game.is_minigame_open
+
 func _unhandled_input(event: InputEvent) -> void:
-	if Game.state != Game.State.PLAYING or Game.tutorial_active:
+	if _menu_open():
 		return
 	if event is InputEventMouseMotion:
 		rotate_y(-event.relative.x * MOUSE_SENS)
@@ -22,13 +27,11 @@ func _unhandled_input(event: InputEvent) -> void:
 		_try_interact()
 
 func _physics_process(delta: float) -> void:
-	var frozen := Game.state != Game.State.PLAYING or Game.is_minigame_open
-	if frozen or Game.tutorial_active:
+	if _menu_open():
 		if not is_on_floor():
 			velocity.y -= gravity * delta
 			move_and_slide()
-		if frozen:
-			return
+		return
 
 	if not is_on_floor():
 		velocity.y -= gravity * delta

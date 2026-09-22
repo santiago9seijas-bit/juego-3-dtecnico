@@ -7,9 +7,9 @@
 /build/
 *.exe
 *.pck
-# Los ZIPs de versiones SI se suben (con excepción para /versions/)
+# Los ZIPs de versiones SI se suben (con excepción para /versions/**)
 *.zip
-!/versions/*.zip
+!/versions/**/*.zip
 
 # Blender / assets temp files
 *.blend1

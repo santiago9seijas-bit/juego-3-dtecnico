@@ -6,7 +6,6 @@ func _ready() -> void:
 	var main: Node = load("res://scenes/main.tscn").instantiate()
 	add_child(main)
 	Game.start_game()
-	Game.hud._end_tutorial()
 	await get_tree().physics_frame
 
 	var player: Node3D = main.get_node("Player")

@@ -28,26 +28,30 @@ func _ready() -> void:
 	var time_before: float = Game.time_left
 	var score_before: int = Game.score
 	Game.carried_parts.append({"name": "Disco SSD 1TB", "type": "hdd", "good": true})
-	minigame._on_part_dropped(ram_slot, Game.carried_parts[0])
+	minigame._on_part_dropped(ram_slot, Game.carried_parts.back())
 	_check(Game.hud.removal_panel.visible == true, "instalar pieza INCORRECTA tambien abre el mini-juego en reversa")
 	Game.hud._on_removal_done()
 	_check(99 not in Game.repaired, "arrastrar repuesto de OTRO tipo NO completa")
-	_check(Game.carried_parts.size() == 0, "la pieza equivocada se consume al instalarla")
+	_check(Game.carried_parts.size() == 1 and Game.carried_parts[0].get("good", true) == false, "la pieza dañada queda en la mochila al instalar la equivocada")
+	Game.hud._show_carried()
+	_check(Game.hud.carried_label.text.contains("DAÑADA"), "el inventario INDICA la pieza dañada")
 	_check(Game.time_left < time_before and Game.score < score_before, "equivocarse resta tiempo y puntos")
 
 	time_before = Game.time_left
 	score_before = Game.score
-	Game.carried_parts.append(Game.PART_VARIANTS["ram"][1])
-	minigame._on_part_dropped(ram_slot, Game.carried_parts[0])
+	var wrong_model: Dictionary = Game.PART_VARIANTS["ram"][1]
+	Game.carried_parts.append(wrong_model)
+	minigame._on_part_dropped(ram_slot, wrong_model)
 	Game.hud._on_removal_done()
 	_check(99 not in Game.repaired, "modelo equivocado (DDR4 vs DDR3) NO completa")
-	_check(Game.carried_parts.size() == 0, "el modelo equivocado se consume")
+	_check(Game.carried_parts.size() == 1 and Game.carried_parts[0].get("good", true) == false, "el modelo equivocado se consume y la dañada sigue en la mochila")
 	_check(Game.time_left < time_before and Game.score < score_before, "equivocarse de modelo tambien penaliza")
 
 	time_before = Game.time_left
 	score_before = Game.score
-	Game.carried_parts.append(Game.PART_VARIANTS["ram"][0])
-	minigame._on_part_dropped(ram_slot, Game.carried_parts[0])
+	var good_model: Dictionary = Game.PART_VARIANTS["ram"][0]
+	Game.carried_parts.append(good_model)
+	minigame._on_part_dropped(ram_slot, good_model)
 	_check(Game.hud.removal_panel.visible == true, "instalar correcto abre el mini-juego en reversa")
 	Game.hud._on_removal_done()
 	_check(99 in Game.repaired, "arrastrar el modelo correcto SI cuenta")
@@ -64,6 +68,10 @@ func _ready() -> void:
 	_check(Game.pick_part_variant(Game.PART_VARIANTS["ram"][0]) == false, "el inventario maximo es 3")
 	_check(Game.carried_parts.size() == 3, "quedan 3 piezas cargadas")
 
+	# Mochila llena: no se puede sacar otra pieza dañada hasta botarla.
+	Game.hud._show_carried()
+	_check(Game.hud.carried_label.text.contains("Llevas (3/3)"), "el inventario muestra el uso de la mochila")
+
 	Game.carried_parts.clear()
 	var pc2: Node = pc_scene.instantiate()
 	pc2.pc_id = 98
@@ -75,6 +83,23 @@ func _ready() -> void:
 	var ram_slot2: RepairSlot = minigame._slot_nodes["ram"]
 	var psu_slot: RepairSlot = minigame._slot_nodes["psu"]
 	_check(ram_slot2.has_broken_part() and psu_slot.has_broken_part(), "PC doble: 2 slots dañados")
+
+	# Con la mochila llena, SACAR una pieza dañada queda bloqueado.
+	Game.carried_parts.clear()
+	Game.pick_part_variant(Game.PART_VARIANTS["gpu"][0])
+	Game.pick_part_variant(Game.PART_VARIANTS["mb"][0])
+	Game.pick_part_variant(Game.PART_VARIANTS["ram"][0])
+	_check(Game.carried_parts.size() == Game.MAX_CARRIED, "mochila llena con 3 repuestos")
+	minigame._on_remove_requested(psu_slot)
+	_check(Game.hud.removal_panel.visible == false, "SACAR bloqueado con la mochila llena")
+	Game.carried_parts.clear()
+	# Una pieza dañada no se puede instalar: hay que botarla a la papelera.
+	Game.carried_parts.append({"name": "RAM quemada", "type": "ram", "good": false})
+	minigame._on_part_dropped(ram_slot2, Game.carried_parts[0])
+	_check(Game.hud.removal_panel.visible == false, "tirar una pieza DAÑADA al slot no abre el mini-juego")
+	_check(Game.carried_parts.size() == 1, "la pieza dañada se queda en la mochila")
+	Game.hud.throw_damaged()
+	_check(Game.carried_parts.is_empty(), "la papelera bota la pieza dañada y libera la mochila")
 
 	var hdd_slot: RepairSlot = minigame._slot_nodes["hdd"]
 	_check(minigame._examines_left == 4, "empieza cada PC con 4 examinaciones")
@@ -93,13 +118,13 @@ func _ready() -> void:
 	Game.hud._on_removal_done()
 	_check(hdd_slot.is_empty(), "al completar el mini-juego se retira la pieza buena")
 	Game.carried_parts.append(Game.PART_VARIANTS["hdd"][2])
-	minigame._on_part_dropped(hdd_slot, Game.carried_parts[0])
+	minigame._on_part_dropped(hdd_slot, Game.carried_parts.back())
 	Game.hud._on_removal_done()
 	_check(hdd_slot.part.get("name", "") == Game.PART_VARIANTS["hdd"][2].name, "se puede PONER una pieza en un slot que no estaba dañado")
 	_check(Game.repaired.count(98) == 0, "poner pieza en slot sano NO suma reparación")
 
 	Game.carried_parts.append(Game.PART_VARIANTS["ram"][0])
-	minigame._on_part_dropped(ram_slot2, Game.carried_parts[0])
+	minigame._on_part_dropped(ram_slot2, Game.carried_parts.back())
 	Game.hud._on_removal_done()
 	_check(98 not in Game.repaired, "doble falla: arreglar 1 solo NO completa")
 	_check(minigame._examines_left == 4, "las examinaciones se recargan al reparar bien una pieza")
@@ -113,8 +138,9 @@ func _ready() -> void:
 
 	time_before = Game.time_left
 	score_before = Game.score
-	Game.carried_parts.append(Game.PART_VARIANTS["psu"][1])
-	minigame._on_part_dropped(psu_slot, Game.carried_parts[0])
+	var wrong_psu: Dictionary = Game.PART_VARIANTS["psu"][1]
+	Game.carried_parts.append(wrong_psu)
+	minigame._on_part_dropped(psu_slot, wrong_psu)
 	_check(Game.hud.removal_panel.visible == true, "equivocarse tambien pasa por el mini-juego en reversa")
 	Game.hud._on_removal_done()
 	_check(98 not in Game.repaired, "equivocarse de modelo NO completa la tarea")
@@ -128,8 +154,9 @@ func _ready() -> void:
 	Game.hud._on_removal_done()
 	_check(psu_slot.is_empty(), "al completar el mini-juego se retira la pieza")
 
-	Game.carried_parts.append(Game.PART_VARIANTS["psu"][0])
-	minigame._on_part_dropped(psu_slot, Game.carried_parts[0])
+	var good_psu: Dictionary = Game.PART_VARIANTS["psu"][0]
+	Game.carried_parts.append(good_psu)
+	minigame._on_part_dropped(psu_slot, good_psu)
 	Game.hud._on_removal_done()
 	_check(98 in Game.repaired, "corregir con el modelo correcto SI completa la tarea")
 	_check(Game.repaired.count(98) == 1, "no duplica en el contador")
@@ -232,6 +259,38 @@ func _ready() -> void:
 			b.toggled.emit(false)
 	_check(psu_done2[0], "PSU reversa: atornillar todo completa la instalacion")
 	Game.hud.removal_panel.visible = false
+
+	# ---- Reparar con el cautil (sin cambiar la pieza) ----
+	var pc3: Node = pc_scene.instantiate()
+	pc3.pc_id = 97
+	pc3.symptom = "fancooler quemado"
+	pc3.fail_type = "fan"
+	pc3.fail_fault = "burn"
+	pc3.fail_fix = "solder"
+	hud_scene.add_child(pc3)
+	minigame.setup(pc3)
+	var fan_slot: RepairSlot = minigame._slot_nodes["fan"]
+	_check(fan_slot.fault == "burn" and fan_slot.fix == "solder", "el slot trae su tipo de dano y como se arregla")
+	_check(fan_slot.fault_label() == "QUEMADA", "una quemadura se identifica al examinar")
+	_check(fan_slot.repair_button != null and fan_slot.repair_button.visible == false, "el boton SOLDAR empieza oculto")
+	minigame._on_examine_requested(fan_slot)
+	_check(fan_slot.revealed == true and fan_slot.repair_button.visible == true, "SOLDAR aparece al examinar una pieza quemada")
+	_check(minigame.feedback_label.text.contains("QUEMADA"), "el aviso explica que esta QUEMADA")
+	_check(minigame.remaining == 1, "queda 1 slot por reparar")
+	minigame._on_repair_requested(fan_slot)
+	_check(Game.hud.removal_panel.visible == true, "SOLDAR abre el mini-juego")
+	_check(Game.hud.removal_panel._mode == "solder", "se abre en modo soldadura (solo cautil)")
+	Game.hud._on_removal_done()
+	_check(fan_slot.part.get("good", false) == true, "soldar repara SIN cambiar la pieza")
+	_check(minigame.remaining == 0, "no queda ninguna falla tras soldar")
+	_check(97 in Game.repaired, "soldar completa la reparacion de la PC")
+
+	# Un slot que hay que CAMBIAR no ofrece SOLDAR.
+	var slot_mb: RepairSlot = minigame._slot_nodes["mb"]
+	slot_mb.set_fault("swap", "swap")
+	slot_mb.set_part({"name": "Placa B550", "type": "mb", "good": false})
+	slot_mb.set_revealed(true)
+	_check(slot_mb.repair_button.visible == false, "un dano normal NO se puede soldar")
 
 	minigame.close_button.pressed.emit()
 	_check(minigame.visible == false, "boton cerrar sale del minijuego")

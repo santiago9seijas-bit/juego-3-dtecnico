@@ -6,6 +6,11 @@ extends Interactable
 @export var fail_type2 := ""
 @export var fail_variant := ""
 @export var fail_variant2 := ""
+# Tipo de daño (volt/quemada/normal) y cómo arreglarlo (soldar/cambiar).
+@export var fail_fault := ""
+@export var fail_fault2 := ""
+@export var fail_fix := ""
+@export var fail_fix2 := ""
 
 var repair_state: Dictionary = {}
 
@@ -35,6 +40,10 @@ func _apply_new_task() -> void:
 	fail_type2 = task.fail2
 	fail_variant = task.variant
 	fail_variant2 = task.variant2
+	fail_fault = task.get("fault", "")
+	fail_fault2 = task.get("fault2", "")
+	fail_fix = task.get("fix", "")
+	fail_fix2 = task.get("fix2", "")
 	repair_state.clear()
 	prompt_text = "Reparar PC %d" % pc_id
 	visible = true

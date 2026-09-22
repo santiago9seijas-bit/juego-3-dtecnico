@@ -66,6 +66,8 @@ Historial completo y notas de cada versión en **[versions/CHANGELOG.md](version
 |---------|------------|---------|-------|
 | **0.2** | Linux x86_64 | [versions/linux-version/0.2.zip](versions/linux-version/0.2.zip) | 2026-09-22 |
 | **0.2** | Windows x86_64 | [versions/windows-version/0.2.zip](versions/windows-version/0.2.zip) | 2026-09-22 |
+| 0.1 | Linux x86_64 | [versions/linux-version/0.1.zip](versions/linux-version/0.1.zip) | 2026-08-06 |
+| 0.1 | Windows x86_64 | [versions/windows-version/0.1.zip](versions/windows-version/0.1.zip) | 2026-08-06 |
 
 Cómo jugar una build descargada:
 

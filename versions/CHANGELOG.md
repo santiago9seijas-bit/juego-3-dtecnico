@@ -5,7 +5,7 @@ Historial de versiones publicadas en [versions/](./).
 | Versión | Fecha       | Linux                         | Windows                         |
 | ------- | ----------- | ----------------------------- | ------------------------------- |
 | **0.2** | 2026-09-22  | [linux-version/0.2.zip](./linux-version/0.2.zip) | [windows-version/0.2.zip](./windows-version/0.2.zip) |
-| 0.1     | 2026-08-06  | *(retirado de la raíz)*       | *(retirado de la raíz)*         |
+| 0.1     | 2026-08-06  | [linux-version/0.1.zip](./linux-version/0.1.zip) | [windows-version/0.1.zip](./windows-version/0.1.zip) |
 
 ---
 
@@ -54,4 +54,4 @@ Primer gran pulido de interfaz, mecánicas de reparación y contenido.
 - Minijuego de deslizar piezas y desatornillado (llana `1`, cruz `2`).
 - 3 niveles de dificultad, puntuación con estrellas, tutorial e inventario de 3 repuestos.
 - Presets de exportación para Windows y Linux con `.pck` embebido.
-- Los ejecutables de esta versión estaban en la raíz (`versions/linux-version.zip` y `versions/windows-version.zip`); en 0.2 se movieron a sus carpetas por plataforma.
+- Los ejecutables de esta versión vivían en la raíz (`versions/linux-version.zip` y `versions/windows-version.zip`); en 0.2 se reorganizaron por plataforma y ahora están en `versions/linux-version/0.1.zip` y `versions/windows-version/0.1.zip`.

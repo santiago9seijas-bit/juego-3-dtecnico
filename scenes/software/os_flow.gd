@@ -234,12 +234,17 @@ func _show_success() -> void:
 func _schedule_finish() -> void:
 	if _emitted or not is_inside_tree():
 		return
+	# Guard: sin él, setup() y _finish_install() programan DOS relojes y
+	# la instalación terminada se anuncia dos veces.
+	_emitted = true
 	get_tree().create_timer(0.7).timeout.connect(_emit)
 
-# _emitted ya está puesto por _schedule_finish(); solo se espera a que
-# el nodo siga en el árbol para emitir la instalación terminada.
+# _emitted lo pone _schedule_finish(); solo se espera a que el nodo siga
+# en el árbol. Si no lo está (ventana cerrada a contrarreloj) se suelta el
+# guard, para que setup() vuelva a programar el aviso al reabrir.
 func _emit() -> void:
 	if not is_inside_tree():
+		_emitted = false
 		return
 	installed.emit()
 

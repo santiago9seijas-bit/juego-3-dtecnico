@@ -299,10 +299,18 @@ func quarantine(index: int) -> void:
 	var c: Dictionary = cards[index]
 	var card: VirusCard = c.card
 	if not bool(c.virus):
-		# Un archivo bueno: se pierden datos.
+		# Un archivo bueno: se pierden datos. SOLO se penaliza la primera
+		# vez (si no, arrastrándolo una y otra vez se farmearía el castigo);
+		# a partir de ahí la tarjeta queda inmóvil y en rojo.
+		var bad: Dictionary = state.get("bad", {})
+		if bool(bad.get(str(index), false)):
+			return
+		bad[str(index)] = true
+		state.bad = bad
 		if not Game.tutorial_mode:
 			Game.penalize()
 		card.modulate = Color(1, 0.6, 0.6, 1.0)
+		card.mouse_filter = Control.MOUSE_FILTER_IGNORE
 		_set_status("¡«%s» era un archivo BUENO! Se han perdido datos. -penalización." % str(c.name), Color(1, 0.4, 0.4))
 		return
 	state.cleaned[str(index)] = true
@@ -325,6 +333,9 @@ func _schedule_finish() -> void:
 
 func _emit_finished() -> void:
 	if not is_inside_tree():
+		# Ventana cerrada antes de tiempo: se suelta el guard para poder
+		# reprogramar el aviso cuando se vuelva a abrir (setup()).
+		_emitted = false
 		return
 	finished.emit()
 

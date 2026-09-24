@@ -39,6 +39,9 @@ var software_content: VBoxContainer
 var software_status: Label
 var software_close: Button
 var _soft_pc: Node = null
+# Corta señales duplicadas: si un minijuego emite `finished` dos veces
+# (dos relojes), solo se cierra y repara una sola.
+var _soft_done := false
 
 # UI propia del modo tutorial (se construye una sola vez en _ready).
 var tut_header: Label
@@ -56,6 +59,7 @@ var tut_complete_text: Label
 
 var _tut_part_shown := ""
 var _last_carried_text := ""
+var _last_pd_text := ""
 var _last_timer_secs := -1
 var _last_score := -1
 var _last_errors := -1
@@ -183,11 +187,15 @@ func _update_timer_urgency() -> void:
 	var total := Game.level_time_total()
 	if total <= 0.0:
 		return
+	# Tiempo y latido cuantizados: el color solo cambia ~10 veces por
+	# segundo (o al 1%) y así NO se repinta el rótulo en CADA frame.
 	var ratio := clampf(Game.time_left / total, 0.0, 1.0)
+	ratio = float(int(ratio * 100.0)) / 100.0
 	var urgency := clampf(1.0 - ratio / 0.35, 0.0, 1.0)
 	var col := UiStyle.CYAN.lerp(Color(1.0, 0.3, 0.32), urgency)
 	if urgency > 0.01:
-		var pulse := 0.5 + 0.5 * sin(Time.get_ticks_msec() * 0.012 * (0.5 + urgency))
+		var tick := float(int(Time.get_ticks_msec() / 90)) * 0.012
+		var pulse := 0.5 + 0.5 * sin(tick * (0.5 + urgency))
 		col = col.lerp(Color(1.0, 0.12, 0.18), 0.4 * urgency * pulse)
 	if col.is_equal_approx(_last_timer_outline):
 		return
@@ -213,6 +221,14 @@ func show_message(text: String) -> void:
 # Inventario: avisa claramente cuándo llevas una pieza dañada (rojo
 # neón + ⚠) para que la vayas a botar a la papelera.
 func _show_carried() -> void:
+	# Mundo de software: no hay mochila ni piezas, así que no se recalcula
+	# nada y el rótulo se queda fijo en "—" (sin cadenas nuevas por frame).
+	if Game.uses_software_room():
+		if _last_carried_text != "Llevas: —":
+			_last_carried_text = "Llevas: —"
+			carried_label.text = "Llevas: —"
+			carried_label.add_theme_color_override("font_color", UiStyle.TEXT)
+		return
 	var text := "Llevas: —"
 	var damaged := Game.damaged_count()
 	if not Game.carried_parts.is_empty():
@@ -410,9 +426,16 @@ func open_software(pc: Node) -> void:
 	if pc.get("pc_id") != null and int(pc.pc_id) in Game.repaired:
 		return
 	_soft_pc = pc
+	_soft_done = false
 	var kind := str(pc.get("kind"))
 	software_title.text = "PC %d · %s" % [int(pc.pc_id), Game.PART_TITLES.get(kind, "PC")]
+	# El título toma el color propio de la estación (mismo color que su
+	# rótulo 3D y su pantalla) para distinguir de un vistazo de qué PC es.
+	var accent: Color = SoftwarePC.KIND_COLORS.get(kind, UiStyle.CYAN)
+	software_title.add_theme_color_override("font_color", accent)
+	software_title.add_theme_color_override("font_outline_color", Color(accent.r, accent.g, accent.b, 0.45))
 	software_symptom.text = "SÍNTOMA: %s" % str(pc.get("symptom"))
+	_last_pd_text = ""
 	_refresh_software_pendrive()
 	_clear_software_content()
 	var cls: GDScript = MINIGAMES.get(kind, BrowserMinigame)
@@ -429,9 +452,53 @@ func open_software(pc: Node) -> void:
 	Game.is_minigame_open = true
 
 # Rótulo vivo del pendrive (se repinta en cada frame mientras hay ventana).
+# Además de lo que lleva, dice QUÉ LE FALTA a la PC que está abierta: así
+# el jugador ve de un vistazo si tiene que volver a la PC de INTERNET.
 func _refresh_software_pendrive() -> void:
-	if software_pendrive:
-		software_pendrive.text = "PENDRIVE · contiene: %s" % Game.pendrive_names()
+	if software_pendrive == null:
+		return
+	var text := "PENDRIVE · contiene: %s" % Game.pendrive_names()
+	var color := UiStyle.CYAN_SOFT
+	var kind := ""
+	var items: Array = []
+	if _soft_pc != null:
+		kind = str(_soft_pc.get("kind"))
+		var task: Variant = _soft_pc.get("task")
+		if task is Dictionary:
+			items = task.get("items", [])
+	if not items.is_empty():
+		var pending: Array = []
+		for id: Variant in items:
+			if not Game.pendrive_has(str(id)):
+				pending.append(str(Game.SW_ITEMS.get(str(id), {}).get("short", id)))
+		if kind == "download":
+			# La PC de INTERNET es la fuente: muestra lo que aún no baja.
+			if pending.is_empty():
+				text += "\n✓ Ya bajaste todo lo que piden las otras PCs."
+				color = Color(0.3, 1.0, 0.5)
+			else:
+				text += "\nPOR BAJAR: %s · lo piden las otras PCs." % ", ".join(pending)
+				color = Color(1.0, 0.69, 0.13)
+		elif kind == "os_install" or kind == "os_swap":
+			# Cualquier imagen sirve: basta con que haya UNA en el pendrive.
+			if pending.size() >= items.size():
+				text += "\nFALTA: una imagen de sistema (Windows, macOS o Linux) · ve a la PC de INTERNET."
+				color = Color(1.0, 0.45, 0.4)
+			else:
+				text += "\n✓ Ya tienes una imagen de sistema en el pendrive."
+				color = Color(0.3, 1.0, 0.5)
+		elif pending.is_empty():
+			text += "\n✓ listo para esta PC."
+			color = Color(0.3, 1.0, 0.5)
+		else:
+			text += "\nFALTA PARA ESTA PC: %s · ve a la PC de INTERNET." % ", ".join(pending)
+			color = Color(1.0, 0.45, 0.4)
+	# Cache: solo se repinta cuando el contenido cambia de verdad.
+	if text == _last_pd_text:
+		return
+	_last_pd_text = text
+	software_pendrive.text = text
+	software_pendrive.add_theme_color_override("font_color", color)
 
 func close_software() -> void:
 	if software_panel:
@@ -456,8 +523,9 @@ func _clear_software_content() -> void:
 # Se aplaza un frame para que el minijuego termine de emitir su señal
 # sin que su propio nodo quede bloqueado al liberarse.
 func _on_software_done() -> void:
-	if _soft_pc == null:
+	if _soft_pc == null or _soft_done:
 		return
+	_soft_done = true
 	call_deferred("_close_and_repair", _soft_pc)
 
 func _close_and_repair(pc: Node) -> void:

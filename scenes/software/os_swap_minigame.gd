@@ -63,8 +63,10 @@ func setup(new_state: Dictionary, task: Dictionary) -> void:
 	else:
 		flow.visible = false
 	_refresh()
-	if bool(state.get("installed", false)) and bool(state.get("removed", false)):
-		_schedule_finish()
+	# NOTA: no hace falta programar aquí el aviso de reparación: cuando el
+	# sistema ya está instalado, flow.setup() lo hace él solo (y con un único
+	# reloj). Programarlo aquí duplicaba la señal `finished` de esta PC.
+	# (El guard de os_flow se libera solo si cierras la ventana antes de tiempo.)
 
 func _refresh() -> void:
 	if _erase_check == null:
@@ -105,16 +107,6 @@ func _process(delta: float) -> void:
 
 func _show_flow() -> void:
 	flow.visible = true
-
-func _schedule_finish() -> void:
-	if not is_inside_tree():
-		return
-	get_tree().create_timer(0.7).timeout.connect(_emit_finished)
-
-func _emit_finished() -> void:
-	if not is_inside_tree():
-		return
-	finished.emit()
 
 func _set_status(text: String, color: Color) -> void:
 	if _status:

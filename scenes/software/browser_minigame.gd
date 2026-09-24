@@ -312,6 +312,9 @@ func _schedule_finish() -> void:
 
 func _emit_finished() -> void:
 	if not is_inside_tree():
+		# Ventana cerrada antes de tiempo: se suelta el guard para poder
+		# reprogramar el aviso cuando se vuelva a abrir (setup()).
+		_emitted = false
 		return
 	finished.emit()
 

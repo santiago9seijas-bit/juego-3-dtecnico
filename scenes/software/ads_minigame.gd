@@ -259,6 +259,10 @@ func _schedule_finish() -> void:
 
 func _emit_finished() -> void:
 	if not is_inside_tree():
+		# El jugador cerró la ventana mientras corría el reloj: se suelta
+		# el guard para que, al reabrirla, setup() programe otra vez el aviso
+		# y la PC no se quede sin poder repararse.
+		_emitted = false
 		return
 	finished.emit()
 

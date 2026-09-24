@@ -43,6 +43,8 @@ const KIND_COLORS := {
 var _highlight: MeshInstance3D
 var _screen_mat: StandardMaterial3D
 var _label: Label3D
+# Tira LED del escritorio: marca la estación y se pone verde al repararla.
+var _desk_led_mat: StandardMaterial3D
 
 func _ready() -> void:
 	prompt_text = "Reparar PC %d" % pc_id
@@ -133,6 +135,24 @@ func _build() -> void:
 	_label.position = Vector3(0, 0.95, 0)
 	add_child(_label)
 
+	# Tira LED en el borde frontal del escritorio: da color a la estación
+	# (mismo tono que su pantalla y su rótulo) para leer las siete PCs de un
+	# vistazo. Es decorativa: NO tiene colisión, así la mira del jugador
+	# sigue llegando sin tropiezos al monitor.
+	var led_mesh := BoxMesh.new()
+	led_mesh.size = Vector3(1.2, 0.07, 0.04)
+	_desk_led_mat = StandardMaterial3D.new()
+	_desk_led_mat.albedo_color = Color(accent.r * 0.2, accent.g * 0.2, accent.b * 0.2)
+	_desk_led_mat.emission_enabled = true
+	_desk_led_mat.emission = accent
+	_desk_led_mat.emission_energy_multiplier = 1.6
+	led_mesh.material = _desk_led_mat
+	var led := MeshInstance3D.new()
+	led.name = "DeskLed"
+	led.mesh = led_mesh
+	led.position = Vector3(0, -0.58, 0.45)
+	add_child(led)
+
 # Al resolverse, la pantalla pasa a verde y el rótulo deja de pedir acción.
 func _on_completed(pc_id: int) -> void:
 	if pc_id != self.pc_id:
@@ -145,6 +165,12 @@ func _on_completed(pc_id: int) -> void:
 	if _label:
 		_label.modulate = Color(0.35, 1.0, 0.6)
 		_label.text = "LISTA"
+	# La tira LED del escritorio pasa a VERDE: se ve desde el otro lado de
+	# la sala qué PCs quedaron listas.
+	if _desk_led_mat:
+		_desk_led_mat.emission = Color(0.2, 0.95, 0.5)
+		_desk_led_mat.emission_energy_multiplier = 2.2
+		_desk_led_mat.albedo_color = Color(0.04, 0.19, 0.1)
 
 func interact(_player: Node3D) -> void:
 	super(_player)

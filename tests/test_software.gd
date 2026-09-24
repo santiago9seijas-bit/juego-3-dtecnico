@@ -103,6 +103,18 @@ func _minijuegos() -> void:
 	Game.start_level(1, Game.SECTION_SOFTWARE)
 	_check(Game.pendrive.is_empty(), "el nivel empieza con el pendrive vacio")
 
+	# ---- El cartel del pendrive: se ve QUÉ LE FALTA a cada PC -------
+	var pc_preview := _pc(1)
+	hud.open_software(pc_preview)
+	_check(_mg(hud) is DriversMinigame, "se abre la ventana de CONTROLADORES")
+	_check(hud.software_pendrive.text.contains("FALTA PARA ESTA PC"),
+		"con el pendrive VACIO el cartel dice qué le falta a esa PC")
+	_check(hud.software_pendrive.text.contains("NVIDIA"), "…nombra los archivos que faltan")
+	_check(hud.software_pendrive.text.contains("ve a la PC de INTERNET"),
+		"y dice dónde bajarlos")
+	hud.close_software()
+	pc_preview.free()
+
 	# ---- PC 1 · INTERNET (navegador con descargas) ------------------
 	var pc1 := _pc(0)
 	hud.open_software(pc1)
@@ -117,6 +129,8 @@ func _minijuegos() -> void:
 	_check(browser.show_ads, "y trae anuncios falsos")
 	_check(browser._files.size() == Game.SW_ITEM_ORDER.size(), "la pagina lista los 6 archivos")
 	_check(hud.software_pendrive.text.contains("vacío"), "al abrir la PC 1 el pendrive aparece vacio")
+	_check(hud.software_pendrive.text.contains("POR BAJAR"),
+		"y la PC 1 anuncia lo que aún queda por bajar")
 
 	var errs := Game.errors
 	browser._on_ad_pressed(0, Button.new())
@@ -146,6 +160,8 @@ func _minijuegos() -> void:
 	await get_tree().process_frame
 	_check(hud.software_pendrive.text.contains("NVIDIA") and hud.software_pendrive.text.contains("Windows"),
 		"el HUD dice lo que lleva el pendrive mientras baja")
+	_check(hud.software_pendrive.text.contains("Ya bajaste todo"),
+		"…y, al terminar, confirma que ya bajó todo lo pedido")
 	await get_tree().create_timer(1.2).timeout
 	_check(hud.software_panel.visible == false, "la ventana se sola al terminar")
 	_check(1 in Game.repaired, "con las descargas se repara la PC 1")
@@ -160,6 +176,8 @@ func _minijuegos() -> void:
 		hud.free()
 		return
 	_check(drivers.items.size() == 3, "tres secciones: NVIDIA, AMD e Intel")
+	_check(hud.software_pendrive.text.contains("listo para esta PC"),
+		"con todo ya bajado el cartel confirma que esta PC lo tiene en el pendrive")
 	_check(not drivers.is_installed("driver_nvidia"), "todavia no hay ninguno instalado")
 	_check(_pill_text(drivers, "driver_nvidia") == "EN PENDRIVE", "lo que esta en el pendrive se ve EN PENDRIVE")
 	Game.pendrive.erase("driver_nvidia")
@@ -187,6 +205,8 @@ func _minijuegos() -> void:
 		hud.free()
 		return
 	_check(_steps_of(os_pc) != null, "el instalador trae los pasos 1, 2 y 3 apilados")
+	_check(hud.software_pendrive.text.contains("imagen de sistema"),
+		"el cartel avisa que ya hay una imagen de SO en el pendrive")
 	var flow: Node = os_pc.flow
 	flow._pick_os("so_mac")
 	_check(str(os_pc.state.get("os_id", "")) == "", "un SO que NO esta en el pendrive no se elige")
@@ -226,6 +246,10 @@ func _minijuegos() -> void:
 	errs = Game.errors
 	virus.quarantine(good[0])
 	_check(Game.errors == errs + 1, "un archivo BUENO en cuarentena penaliza")
+	virus.quarantine(good[0])
+	_check(Game.errors == errs + 1, "…pero solo UNA vez por archivo (no se puede farmear)")
+	_check(bool((virus.state.get("bad", {}) as Dictionary).has(str(good[0]))),
+		"y queda marcado en el estado")
 	for i: int in sick:
 		virus.quarantine(i)
 	_check(virus.cleaned_count() == 4, "los 4 virus en cuarentena")

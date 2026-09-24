@@ -319,10 +319,12 @@ func _schedule_finish() -> void:
 		return
 	get_tree().create_timer(0.7).timeout.connect(_emit_finished)
 
-# OJO: _emitted ya está puesto por _schedule_finish(); aquí SOLO se
-# comprueba que el nodo siga vivo, o la señal nunca llegaría.
+# OJO: _emitted lo pone _schedule_finish(); aquí solo se comprueba que el
+# nodo siga en el árbol. Si no lo está (ventana cerrada a contrarreloj) se
+# suelta el guard para que setup() vuelva a programar el aviso al reabrir.
 func _emit_finished() -> void:
 	if not is_inside_tree():
+		_emitted = false
 		return
 	finished.emit()
 

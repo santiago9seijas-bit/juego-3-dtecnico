@@ -164,6 +164,10 @@ func _setup_software_room() -> void:
 		_spawn_desk(pos)
 		level_root.add_child(_make_software_pc(Game.current_tasks[i], pos))
 	_spawn_room_sign("MUNDO 2 · PROBLEMAS DE SOFTWARE", Vector3(0.0, 2.75, -(SW_ROOM_HALF - 0.3)))
+	# Regla de la casa, a la vista en cuanto entras: el pendrive es lo que
+	# une las siete PCs (se baja en INTERNET y se instala en las demás).
+	_spawn_room_sign("PENDRIVE: baja en INTERNET y llévalo a las otras PCs",
+		Vector3(0.0, 2.28, -(SW_ROOM_HALF - 0.3)), 34, Color(1.0, 0.69, 0.13))
 	_spawn_wall_screens()
 	player.position = LEVEL_SPAWN
 	player.velocity = Vector3.ZERO
@@ -191,21 +195,23 @@ func _make_software_pc(task: Dictionary, pos: Vector3) -> Node:
 	return pc
 
 # Rótulo fijo en la pared norte (no gira con la cámara).
-func _spawn_room_sign(text: String, pos: Vector3) -> void:
+func _spawn_room_sign(text: String, pos: Vector3, size := 54, color := Color(0.15, 0.9, 1.0)) -> void:
 	var label := Label3D.new()
 	label.text = text
-	label.font_size = 54
+	label.font_size = size
 	label.outline_size = 10
-	label.modulate = Color(0.15, 0.9, 1.0)
+	label.modulate = color
 	label.position = pos
 	level_root.add_child(label)
 
 # Pantallas encendidas en la pared norte, para que la sala se vea de taller.
+# La sala de software mide 14 de ancho, así que van CUATRO: dos a cada lado
+# del rótulo central (que ocupa x ≈ -2.2 … +2.2).
 func _spawn_wall_screens() -> void:
 	var wall_z := -(SW_ROOM_HALF - 0.28)
-	for x: float in [-4.2, 4.2]:
+	for x: float in [-5.7, -3.4, 3.4, 5.7]:
 		var mesh := BoxMesh.new()
-		mesh.size = Vector3(2.0, 1.2, 0.06)
+		mesh.size = Vector3(2.2, 1.2, 0.06)
 		var mat := StandardMaterial3D.new()
 		mat.albedo_color = Color(0.03, 0.06, 0.1)
 		mat.emission_enabled = true

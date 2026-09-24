@@ -72,15 +72,25 @@ func setup(new_state: Dictionary, task: Dictionary, new_pc_id := 0) -> void:
 				"done": false,
 				"stalled": false,
 			}
+		# Lo que ya está en el pendrive cuenta como bajado Y guardado
+		# (así el prefill de los tutoriales sale todo hecho).
+		if id in Game.pendrive:
+			_files[id].done = true
+			_files[id].progress = 1.0
+			_files[id].stalled = false
 		state.files[id] = _files[id]
 	_active = str(state.get("active", ""))
 	if _active != "" and bool(_files.get(_active, {}).get("done", false)):
 		_active = ""
 		state.active = ""
+	if not state.has("drops"):
+		state.drops = {}
 	_build()
 	_refresh_ui()
 	_running = true
-	if _all_requested_done():
+	if _all_downloaded() and not _all_requested_done():
+		_set_status("TODO BAJADO: ahora pasa a la pestaña PENDRIVE y guarda los archivos.", UiStyle.CYAN_SOFT)
+	elif _all_requested_done():
 		_set_status("¡DESCARGAS COMPLETAS! El pendrive ya lleva todo lo que piden las otras PCs.", Color(0.3, 1, 0.5))
 		_schedule_finish()
 
@@ -93,6 +103,10 @@ func _build() -> void:
 	add_child(chrome)
 
 	var tab := SwUI.label("▰ NAVEGADOR DEL TALLER", 16, UiStyle.CYAN)
+	# El título va SIN autowrap: si no su mínimo es de 1px y el HBox se lo
+	# come entero (saldría letra debajo de letra y la fila mediría 500px).
+	tab.autowrap_mode = TextServer.AUTOWRAP_OFF
+	tab.size_flags_horizontal = Control.SIZE_SHRINK_BEGIN
 	chrome.add_child(tab)
 
 	var url_box := PanelContainer.new()
@@ -112,7 +126,7 @@ func _build() -> void:
 	_url_label = SwUI.label("https://www.descargas-del-taller.net/centro-de-descargas", 15, UiStyle.CYAN_SOFT)
 	url_box.add_child(_url_label)
 
-	var page := SwUI.label("CENTRO DE DESCARGAS · todo lo que bajes queda en el PENDRIVE", 20, UiStyle.CYAN)
+	var page := SwUI.label("CENTRO DE DESCARGAS · baja lo pedido y llévalo al PENDRIVE", 20, UiStyle.CYAN)
 	page.add_theme_color_override("font_outline_color", Color(UiStyle.CYAN.r, UiStyle.CYAN.g, UiStyle.CYAN.b, 0.35))
 	page.add_theme_constant_override("font_outline_size", 6)
 	add_child(page)
@@ -127,6 +141,9 @@ func _build() -> void:
 		{"n": 3, "text": "Cierra las ventanas emergentes con su botón [color=#ff2e88]CERRAR[/color]: si se apilan %d, entra malware." % POPUP_LIMIT},
 	]))
 	add_child(SwUI.rich("[color=#ffb020]El PENDRIVE tiene que estar METERIDO en esta PC[/color]: si no, el botón DESCARGAR no funciona."))
+	add_child(SwUI.rich(
+		"Cuando bajes todo, abre la pestaña [color=#19e6ff][b]PENDRIVE[/b][/color], arrastra cada archivo a su hueco " +
+		"y pulsa [color=#ff2e88]GUARDAR EN EL PENDRIVE[/color]."))
 
 	# Lista de descargas: SOLO lo que piden las otras PCs, por sección.
 	_rows_box = SwUI.vbox(10)
@@ -216,22 +233,32 @@ func _refresh_counter() -> void:
 	if _counter == null:
 		return
 	var missing := _missing_count()
-	if missing == 0:
-		_counter.text = "✓ TODO BAJADO · %d de %d archivos" % [requested.size(), requested.size()]
-		_counter.add_theme_color_override("font_color", Color(0.3, 1, 0.5))
-	else:
+	if missing > 0:
 		_counter.text = "✗ FALTAN %d DE %d ARCHIVOS PARA LAS OTRAS PCS" % [missing, requested.size()]
 		_counter.add_theme_color_override("font_color", Color(1, 0.69, 0.13))
+	elif not _all_requested_done():
+		_counter.text = "✓ TODO BAJADO · ahora guárdalos en el PENDRIVE (pestaña PENDRIVE)"
+		_counter.add_theme_color_override("font_color", UiStyle.CYAN_SOFT)
+	else:
+		_counter.text = "✓ PENDRIVE CARGADO · %d de %d archivos" % [requested.size(), requested.size()]
+		_counter.add_theme_color_override("font_color", Color(0.3, 1, 0.5))
 
 func _pill_text(id: String) -> String:
 	if id in Game.pendrive:
 		return "EN PENDRIVE ✓"
+	if _is_downloaded(id):
+		return "DESCARGADO ✓ · GUÁRDALO"
 	return "FALTA · DESCÁRGALO"
 
 func _pill_color(id: String) -> Color:
 	if id in Game.pendrive:
 		return Color(0.3, 1, 0.5)
+	if _is_downloaded(id):
+		return UiStyle.CYAN_SOFT
 	return Color(1, 0.69, 0.13)
+
+func _is_downloaded(id: String) -> bool:
+	return bool(_files.get(id, {}).get("done", false))
 
 # ------------------------------------------------------------------
 # Descargas
@@ -300,25 +327,38 @@ func _complete(id: String) -> void:
 	f.done = true
 	f.stalled = false
 	f.progress = 1.0
-	# Lo recién bajado se guarda SOLO en el pendrive.
-	Game.pendrive_add(id)
+	# La descarga queda AQUÍ, todavía sin tocar el pendrive: hay que
+	# arrastrarla a su hueco en la pestaña PENDRIVE y guardarla.
 	_active = ""
 	state.active = ""
 	_refresh_ui()
+	if not _all_downloaded():
+		_set_status("¡%s descargado! Faltan %d archivos por bajar." % [
+			str(Game.SW_ITEMS.get(id, {}).get("short", id)), _missing_count()], Color(0.3, 1, 0.5))
+		return
+	_running = false
 	if _all_requested_done():
 		_set_status("¡DESCARGAS COMPLETAS! El pendrive ya lleva todo lo que piden las otras PCs.", Color(0.3, 1, 0.5))
-		_running = false
 		_schedule_finish()
 	else:
-		_set_status("¡%s en el pendrive! Faltan %d archivos." % [
-			str(Game.SW_ITEMS.get(id, {}).get("short", id)), _missing_count()], Color(0.3, 1, 0.5))
+		_set_status("¡TODO BAJADO! Abre la pestaña PENDRIVE, arrastra cada archivo a su hueco y pulsa GUARDAR.", UiStyle.CYAN_SOFT)
 
 func _missing_count() -> int:
 	var n := 0
 	for id in requested:
-		if id not in Game.pendrive:
+		if not _is_downloaded(id):
 			n += 1
 	return n
+
+# ¿Están todos los archivos ya bajados (aunque todavía no se hayan
+# guardado en el pendrive)?
+func _all_downloaded() -> bool:
+	if requested.is_empty():
+		return false
+	for id in requested:
+		if not _is_downloaded(id):
+			return false
+	return true
 
 # La tarea se da por buena cuando el pendrive lleva TODO lo pedido.
 func _all_requested_done() -> bool:
@@ -342,6 +382,98 @@ func _emit_finished() -> void:
 		_emitted = false
 		return
 	finished.emit()
+
+# ------------------------------------------------------------------
+# Pestaña PENDRIVE: lo descargado (izquierda) → los huecos de esta PC
+# (derecha) → GUARDAR EN EL PENDRIVE.
+# ------------------------------------------------------------------
+func usb_spec() -> Dictionary:
+	var source := []
+	var titles := {}
+	for id in requested:
+		titles[id] = str(Game.SW_ITEMS.get(id, {}).get("name", id))
+		if _is_downloaded(id) and id not in Game.pendrive:
+			source.append(id)
+	var slots := []
+	for id in requested:
+		var info: Dictionary = Game.SW_ITEMS.get(id, {})
+		slots.append({
+			"id": "slot_%s" % id,
+			"title": _requester_label(id).trim_prefix("→ ").to_upper(),
+			"hint": "%s · %s" % [info.get("file", id), info.get("size", "")],
+			"accept": [id],
+		})
+	var hint := "Arrastra cada descarga a su hueco y pulsa GUARDAR EN EL PENDRIVE."
+	if _all_requested_done():
+		hint = "✓ Todo guardado en el pendrive: ya puedes llevárselo a las otras PCs."
+	elif not _all_downloaded():
+		hint = "Primero baja TODO lo pedido en la pestaña EL ERROR; después arrastra aquí y guarda."
+	return {
+		"slots": slots,
+		"source": source,
+		"source_titles": titles,
+		"source_title": "DESCARGADOS SIN GUARDAR",
+		"slots_title": "HUECOS DEL PENDRIVE",
+		"install_text": "GUARDAR EN EL PENDRIVE",
+		"hint": hint,
+	}
+
+# Huecos rellenos: lo que ya se arrastró + lo que ya está en el pendrive.
+func usb_drops() -> Dictionary:
+	var out := {}
+	var drops: Dictionary = state.get("drops", {})
+	for id in requested:
+		var slot := "slot_%s" % id
+		if drops.has(slot):
+			out[slot] = str(drops[slot])
+		elif id in Game.pendrive:
+			out[slot] = id
+	return out
+
+func usb_drop(slot_id: String, item_id: String) -> bool:
+	if item_id not in requested or slot_id != "slot_%s" % item_id:
+		return false
+	if item_id in Game.pendrive or not _is_downloaded(item_id):
+		return false
+	var drops: Dictionary = state.get("drops", {})
+	drops[slot_id] = item_id
+	state.drops = drops
+	_refresh_ui()
+	return true
+
+func usb_ready() -> bool:
+	if _all_requested_done():
+		return false
+	var drops := usb_drops()
+	for id in requested:
+		if not drops.has("slot_%s" % id):
+			return false
+	return true
+
+func usb_install() -> Dictionary:
+	if not _usb_ok():
+		return {"ok": false, "msg": "✗ El pendrive NO está metido en esta PC: pulsa INSERTAR PENDRIVE."}
+	var drops := usb_drops()
+	var missing := []
+	for id in requested:
+		if not drops.has("slot_%s" % id):
+			missing.append(str(Game.SW_ITEMS.get(id, {}).get("short", id)))
+	if not missing.is_empty():
+		return {"ok": false, "msg": "Arrastra primero: falta %s." % ", ".join(missing)}
+	var saved := 0
+	for slot in drops:
+		var id := str(drops[slot])
+		if id not in Game.pendrive:
+			Game.pendrive_add(id)
+			saved += 1
+	state.erase("drops")
+	_refresh_ui()
+	if _all_requested_done():
+		_running = false
+		_set_status("¡PENDRIVE CARGADO! Ya lleva todo lo que piden las otras PCs.", Color(0.3, 1, 0.5))
+		_schedule_finish()
+		return {"ok": true, "msg": "¡%d archivos guardados en el pendrive!" % saved}
+	return {"ok": true, "msg": "%d archivos guardados en el pendrive." % saved}
 
 func _refresh_ui() -> void:
 	_refresh_counter()

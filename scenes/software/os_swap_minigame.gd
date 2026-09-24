@@ -75,6 +75,33 @@ func refresh_usb() -> void:
 	if flow:
 		flow.refresh_usb()
 
+# ---- Pestaña PENDRIVE (arrastrar el sistema + INSTALAR) -------------
+func usb_spec() -> Dictionary:
+	var spec: Dictionary = flow.usb_spec() if flow else {}
+	if not bool(state.get("removed", false)):
+		spec["hint"] = "Primero quita el sistema viejo (paso 1, pestaña EL ERROR)."
+	return spec
+
+func usb_drops() -> Dictionary:
+	return flow.usb_drops() if flow else {}
+
+func usb_drop(slot_id: String, item_id: String) -> bool:
+	if not bool(state.get("removed", false)):
+		return false
+	return bool(flow.usb_drop(slot_id, item_id)) if flow else false
+
+func usb_ready() -> bool:
+	if not bool(state.get("removed", false)):
+		return false
+	return bool(flow.usb_ready()) if flow else false
+
+func usb_install() -> Dictionary:
+	if not bool(state.get("removed", false)):
+		return {"ok": false, "msg": "Primero quita el sistema viejo (paso 1, pestaña EL ERROR)."}
+	if flow == null:
+		return {"ok": false, "msg": "No hay instalador."}
+	return flow.usb_install()
+
 func _refresh() -> void:
 	if _erase_check == null:
 		return

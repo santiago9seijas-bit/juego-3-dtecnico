@@ -31,6 +31,24 @@ func refresh_usb() -> void:
 	if flow:
 		flow.refresh_usb()
 
+# ---- Pestaña PENDRIVE (arrastrar el sistema + INSTALAR) -------------
+func usb_spec() -> Dictionary:
+	return flow.usb_spec() if flow else {}
+
+func usb_drops() -> Dictionary:
+	return flow.usb_drops() if flow else {}
+
+func usb_drop(slot_id: String, item_id: String) -> bool:
+	return bool(flow.usb_drop(slot_id, item_id)) if flow else false
+
+func usb_ready() -> bool:
+	return bool(flow.usb_ready()) if flow else false
+
+func usb_install() -> Dictionary:
+	if flow == null:
+		return {"ok": false, "msg": "No hay instalador."}
+	return flow.usb_install()
+
 func _process(delta: float) -> void:
 	if flow:
 		flow.tick(delta)

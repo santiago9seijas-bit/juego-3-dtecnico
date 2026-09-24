@@ -42,6 +42,21 @@ var software_usb_button: Button
 var software_content: VBoxContainer
 var software_status: Label
 var software_close: Button
+# ---- DOS PESTAÑAS: "EL ERROR" (diagnóstico) y "PENDRIVE" ------------
+var software_tabs: HBoxContainer
+var software_tab_error: Button
+var software_tab_usb: Button
+var software_page_error: VBoxContainer
+var software_page_usb: VBoxContainer
+var software_usb_title: Label
+var software_usb_items: VBoxContainer
+var software_usb_slots: VBoxContainer
+var software_usb_head_left: Label
+var software_usb_head_right: Label
+var software_usb_extra: VBoxContainer
+var software_usb_install: Button
+var software_usb_status: Label
+var _soft_tab := "error"
 var _soft_pc: Node = null
 # Corta señales duplicadas: si un minijuego emite `finished` dos veces
 # (dos relojes), solo se cierra y repara una sola.
@@ -143,6 +158,9 @@ func _process(delta: float) -> void:
 	# tiene que decir SIEMPRE qué lleva y qué le falta a esa PC.
 	if software_panel and software_panel.visible:
 		_refresh_software_pendrive()
+		# El enchufe cambia también sin que se mueva el contenido (al
+		# meter o sacar el pendrive): se repinta su fila y la pestaña.
+		_refresh_software_usb()
 	if not playing:
 		return
 	if not Game.tutorial_mode:
@@ -425,12 +443,34 @@ func _build_software_ui() -> void:
 	software_close.pressed.connect(close_software)
 	head.add_child(software_close)
 
+	# ---------------- DOS PESTAÑAS ------------------------------------
+	# Pestaña 1 "EL ERROR": qué le pasa a esta PC, el hueco USB y el
+	# diagnóstico. Pestaña 2 "PENDRIVE": el contenido del pendrive y los
+	# huecos de esta PC, para arrastrar de un lado a otro y darle a
+	# INSTALAR. La 2ª solo existe mientras el pendrive está enchufado aquí.
+	software_tabs = HBoxContainer.new()
+	software_tabs.name = "SoftwareTabs"
+	software_tabs.add_theme_constant_override("separation", 10)
+	box.add_child(software_tabs)
+	var tab_group := ButtonGroup.new()
+	software_tab_error = _software_tab_button(tab_group, "EL ERROR", UiStyle.AMBER)
+	software_tabs.add_child(software_tab_error)
+	software_tab_usb = _software_tab_button(tab_group, "PENDRIVE", UiStyle.CYAN)
+	software_tabs.add_child(software_tab_usb)
+
+	# ---------------- Pestaña 1 · EL ERROR ---------------------------
+	software_page_error = VBoxContainer.new()
+	software_page_error.name = "PageError"
+	software_page_error.size_flags_vertical = Control.SIZE_EXPAND_FILL
+	software_page_error.add_theme_constant_override("separation", 12)
+	box.add_child(software_page_error)
+
 	software_symptom = Label.new()
 	software_symptom.name = "SoftwareSymptom"
 	software_symptom.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
 	software_symptom.add_theme_font_size_override("font_size", 15)
 	software_symptom.add_theme_color_override("font_color", Color(1, 0.85, 0.4))
-	box.add_child(software_symptom)
+	software_page_error.add_child(software_symptom)
 
 	# Contenido del pendrive: el jugador siempre ve qué le falta llevar.
 	software_pendrive = Label.new()
@@ -438,14 +478,14 @@ func _build_software_ui() -> void:
 	software_pendrive.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
 	software_pendrive.add_theme_font_size_override("font_size", 14)
 	software_pendrive.add_theme_color_override("font_color", UiStyle.CYAN_SOFT)
-	box.add_child(software_pendrive)
+	software_page_error.add_child(software_pendrive)
 
 	# HUECO USB: el pendrive hay que METERLO en la PC para que esta PC
 	# pueda bajar o instalar lo que necesita (y sacarlo para llevarlo a otra).
 	software_usb_row = HBoxContainer.new()
 	software_usb_row.name = "SoftwareUsb"
 	software_usb_row.add_theme_constant_override("separation", 12)
-	box.add_child(software_usb_row)
+	software_page_error.add_child(software_usb_row)
 
 	software_usb_label = Label.new()
 	software_usb_label.name = "SoftwareUsbLabel"
@@ -471,7 +511,7 @@ func _build_software_ui() -> void:
 	software_scroll.size_flags_vertical = Control.SIZE_EXPAND_FILL
 	software_scroll.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 	software_scroll.horizontal_scroll_mode = ScrollContainer.SCROLL_MODE_DISABLED
-	box.add_child(software_scroll)
+	software_page_error.add_child(software_scroll)
 	software_scroll.add_child(software_content)
 
 	software_status = Label.new()
@@ -479,10 +519,282 @@ func _build_software_ui() -> void:
 	software_status.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
 	software_status.add_theme_font_size_override("font_size", 15)
 	software_status.add_theme_color_override("font_color", UiStyle.TEXT_DIM)
-	box.add_child(software_status)
+	software_page_error.add_child(software_status)
 
+	# ---------------- Pestaña 2 · PENDRIVE ---------------------------
+	_build_software_usb_page(box)
 	# Tema ciberpunk + animación del botón (el resto llega por herencia).
 	UiStyle.apply(software_panel)
+
+# Botón de pestaña (conmutador): el que se pilla se queda resaltado.
+func _software_tab_button(group: ButtonGroup, text: String, color: Color) -> Button:
+	var b := Button.new()
+	b.text = text
+	b.toggle_mode = true
+	b.button_group = group
+	b.custom_minimum_size = Vector2(190, 40)
+	b.add_theme_font_size_override("font_size", 16)
+	b.add_theme_color_override("font_color", color)
+	b.pressed.connect(func() -> void: _show_software_tab("error" if b == software_tab_error else "usb"))
+	return b
+
+# Construye la pestaña 2: pendrive a la IZQUIERDA, huecos de esta PC a la
+# DERECHA y el botón INSTALAR debajo. Se repinta entera cuando cambia algo.
+func _build_software_usb_page(parent: VBoxContainer) -> void:
+	software_page_usb = VBoxContainer.new()
+	software_page_usb.name = "PageUsb"
+	software_page_usb.size_flags_vertical = Control.SIZE_EXPAND_FILL
+	software_page_usb.add_theme_constant_override("separation", 8)
+	software_page_usb.visible = false
+	parent.add_child(software_page_usb)
+
+	software_usb_title = Label.new()
+	software_usb_title.name = "UsbTitle"
+	software_usb_title.add_theme_font_size_override("font_size", 17)
+	software_usb_title.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
+	software_usb_title.add_theme_color_override("font_color", UiStyle.CYAN_SOFT)
+	software_page_usb.add_child(software_usb_title)
+
+	# Las dos columnas van dentro de un scroll para que la ventana nunca
+	# crezca más de la pantalla aunque el pendrive venga lleno.
+	var scroll := ScrollContainer.new()
+	scroll.name = "UsbScroll"
+	scroll.size_flags_vertical = Control.SIZE_EXPAND_FILL
+	scroll.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	scroll.custom_minimum_size = Vector2(0, 150)
+	scroll.horizontal_scroll_mode = ScrollContainer.SCROLL_MODE_DISABLED
+	software_page_usb.add_child(scroll)
+
+	var columns := HBoxContainer.new()
+	columns.name = "UsbColumns"
+	columns.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	columns.size_flags_vertical = Control.SIZE_EXPAND_FILL
+	columns.add_theme_constant_override("separation", 14)
+	scroll.add_child(columns)
+
+	var left := _usb_column(columns, "Pendrive", "EN EL PENDRIVE", UiStyle.CYAN)
+	software_usb_head_left = left.get_child(0) as Label
+	software_usb_items = VBoxContainer.new()
+	software_usb_items.name = "UsbItems"
+	software_usb_items.size_flags_vertical = Control.SIZE_EXPAND_FILL
+	software_usb_items.add_theme_constant_override("separation", 7)
+	left.add_child(software_usb_items)
+
+	var right := _usb_column(columns, "Huecos", "LO QUE PIDE ESTA PC", UiStyle.MAGENTA)
+	software_usb_head_right = right.get_child(0) as Label
+	software_usb_slots = VBoxContainer.new()
+	software_usb_slots.name = "UsbSlots"
+	software_usb_slots.size_flags_vertical = Control.SIZE_EXPAND_FILL
+	software_usb_slots.add_theme_constant_override("separation", 7)
+	right.add_child(software_usb_slots)
+
+	# Zona extra: aquí el minijuego puede meter sus propios controles
+	# (idioma, avisos…). Se vacía con free() porque son suyos.
+	software_usb_extra = VBoxContainer.new()
+	software_usb_extra.name = "UsbExtra"
+	software_usb_extra.add_theme_constant_override("separation", 7)
+	software_page_usb.add_child(software_usb_extra)
+
+	software_usb_install = Button.new()
+	software_usb_install.name = "UsbInstall"
+	software_usb_install.text = "INSTALAR"
+	software_usb_install.custom_minimum_size = Vector2(0, 46)
+	software_usb_install.add_theme_font_size_override("font_size", 18)
+	software_usb_install.disabled = true
+	software_usb_install.pressed.connect(_on_usb_install)
+	software_page_usb.add_child(software_usb_install)
+
+	software_usb_status = Label.new()
+	software_usb_status.name = "UsbStatus"
+	software_usb_status.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
+	software_usb_status.add_theme_font_size_override("font_size", 14)
+	software_usb_status.add_theme_color_override("font_color", UiStyle.TEXT_DIM)
+	software_page_usb.add_child(software_usb_status)
+
+# Títulos de las dos columnas: cada minijuego puede renombrarlas desde su
+# usb_spec() (por ejemplo el navegador: nada está aún "en el pendrive").
+func _set_usb_heads(left_text: String, right_text: String) -> void:
+	if software_usb_head_left != null:
+		software_usb_head_left.text = left_text
+	if software_usb_head_right != null:
+		software_usb_head_right.text = right_text
+
+func _usb_column(parent: Container, key: String, title: String, color: Color) -> VBoxContainer:
+	var panel := PanelContainer.new()
+	panel.name = "UsbCol_%s" % key
+	panel.size_flags_vertical = Control.SIZE_EXPAND_FILL
+	panel.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	var style := StyleBoxFlat.new()
+	style.bg_color = Color(0.04, 0.06, 0.09, 0.85)
+	style.set_border_width_all(1)
+	style.border_color = Color(color.r, color.g, color.b, 0.5)
+	style.set_corner_radius_all(8)
+	style.content_margin_left = 10.0
+	style.content_margin_right = 10.0
+	style.content_margin_top = 8.0
+	style.content_margin_bottom = 10.0
+	panel.add_theme_stylebox_override("panel", style)
+	parent.add_child(panel)
+	var box := VBoxContainer.new()
+	box.name = "Box"
+	box.size_flags_vertical = Control.SIZE_EXPAND_FILL
+	box.add_theme_constant_override("separation", 6)
+	panel.add_child(box)
+	var head := Label.new()
+	head.text = title
+	head.add_theme_font_size_override("font_size", 14)
+	head.add_theme_color_override("font_color", color)
+	box.add_child(head)
+	return box
+
+# ------------------------------------------------------------------
+# Cambio de pestaña
+# ------------------------------------------------------------------
+func _usb_tab_available() -> bool:
+	if _soft_pc == null or software_page_usb == null:
+		return false
+	var kind := str(_soft_pc.get("kind"))
+	if not Game.usb_needed(kind):
+		return false
+	var pc_number := 0
+	if _soft_pc.get("pc_id") != null:
+		pc_number = int(_soft_pc.pc_id)
+	return Game.pendrive_in(pc_number)
+
+func _show_software_tab(which: String) -> void:
+	if software_page_usb == null:
+		return
+	if which == "usb" and not _usb_tab_available():
+		which = "error"
+	_soft_tab = which
+	software_tab_usb.visible = _usb_tab_available()
+	software_page_error.visible = which != "usb"
+	software_page_usb.visible = which == "usb"
+	software_tab_error.button_pressed = which != "usb"
+	software_tab_usb.button_pressed = which == "usb"
+	if which == "usb":
+		_rebuild_usb_page()
+
+func _clear_usb_page() -> void:
+	if software_usb_items == null:
+		return
+	_free_children(software_usb_items)
+	_free_children(software_usb_slots)
+	_free_children(software_usb_extra)
+
+# Se SACAN del árbol y se destruyen al terminar el frame: no se puede
+# free() una ficha mientras ella misma está emitiendo `dropped`.
+func _free_children(parent: Node) -> void:
+	for child in parent.get_children():
+		parent.remove_child(child)
+		child.queue_free()
+
+func _software_minigame() -> Node:
+	if software_content == null or software_content.get_child_count() == 0:
+		return null
+	return software_content.get_child(0)
+
+# Pinta la pestaña PENDRIVE: contenido a la izquierda, huecos a la derecha.
+func _rebuild_usb_page() -> void:
+	if software_usb_items == null or _soft_pc == null:
+		return
+	_clear_usb_page()
+	software_usb_status.text = ""
+	software_usb_status.add_theme_color_override("font_color", UiStyle.TEXT_DIM)
+
+	var mg := _software_minigame()
+	if mg == null or not mg.has_method("usb_spec"):
+		software_usb_title.text = "PENDRIVE · %s" % Game.pendrive_names()
+		_set_usb_heads("EN EL PENDRIVE", "LO QUE PIDE ESTA PC")
+		software_usb_install.disabled = true
+		software_usb_status.text = "Esta PC trabaja con lo que ya llevas en el pendrive."
+		return
+
+	var spec: Dictionary = mg.usb_spec()
+	_set_usb_heads(
+		str(spec.get("source_title", "EN EL PENDRIVE")),
+		str(spec.get("slots_title", "LO QUE PIDE ESTA PC")))
+	var accent: Color = SoftwarePC.KIND_COLORS.get(str(_soft_pc.get("kind")), UiStyle.CYAN)
+	software_usb_title.text = "PENDRIVE · %s" % Game.pendrive_names()
+	software_usb_title.add_theme_color_override("font_color", accent)
+	var drops: Dictionary = mg.usb_drops() if mg.has_method("usb_drops") else {}
+
+	# Izquierda: lo que se puede arrastrar.
+	var source: Array = spec.get("source", Game.pendrive)
+	var source_titles: Dictionary = spec.get("source_titles", {})
+	var placed := {}
+	for key in drops:
+		placed[str(drops[key])] = true
+	for raw_id in source:
+		var id := str(raw_id)
+		var info: Dictionary = Game.SW_ITEMS.get(id, {})
+		var title := str(source_titles.get(id, info.get("name", id)))
+		var sub := "%s · %s" % [info.get("file", ""), info.get("size", "")]
+		if placed.has(id):
+			sub = "ya colocado en un hueco"
+		software_usb_items.add_child(UsbPiece.make(
+			"item", id, title, sub, accent, [], id if placed.has(id) else ""))
+
+	# Derecha: los huecos que pide esta PC.
+	var slots: Array = spec.get("slots", [])
+	for raw_slot in slots:
+		var slot: Dictionary = raw_slot
+		var slot_id := str(slot.get("id", ""))
+		var filled := str(drops.get(slot_id, ""))
+		var accept_ids: Array = slot.get("accept", [])
+		var piece := UsbPiece.make(
+			"slot", slot_id, str(slot.get("title", "Hueco")),
+			str(slot.get("hint", "arrastra aquí el archivo")), accent, accept_ids, filled)
+		piece.dropped.connect(_on_usb_drop)
+		software_usb_slots.add_child(piece)
+
+	if mg.has_method("usb_build_extra"):
+		mg.usb_build_extra(software_usb_extra)
+
+	software_usb_install.text = str(spec.get("install_text", "INSTALAR"))
+	software_usb_install.disabled = not bool(mg.usb_ready()) if mg.has_method("usb_ready") else true
+	var hint := str(spec.get("hint", ""))
+	if hint != "":
+		software_usb_status.text = hint
+		software_usb_status.add_theme_color_override("font_color", UiStyle.TEXT_DIM)
+
+# Arrastrar una ficha del pendrive a un hueco de esta PC.
+func _on_usb_drop(slot_id: String, item_id: String) -> void:
+	usb_drop(slot_id, item_id)
+
+# API pública (también la usan las pruebas): ¿acepta el minijuego esa
+# ficha en ese hueco? Si la acepta, la página se repinta para que se vea
+# el hueco relleno y se active su botón.
+func usb_drop(slot_id: String, item_id: String) -> bool:
+	var mg := _software_minigame()
+	if mg == null or not mg.has_method("usb_drop"):
+		return false
+	var ok: bool = mg.usb_drop(slot_id, item_id)
+	if not ok:
+		software_usb_status.text = "✗ Ese archivo no va en ese hueco."
+		software_usb_status.add_theme_color_override("font_color", UiStyle.RED)
+		return false
+	software_usb_status.text = ""
+	_rebuild_usb_page()
+	return true
+
+# Botón INSTALAR de la pestaña PENDRIVE.
+func _on_usb_install() -> void:
+	var mg := _software_minigame()
+	if mg == null or not mg.has_method("usb_install"):
+		return
+	var res: Variant = mg.usb_install()
+	if res is Dictionary and not bool(res.get("ok", false)):
+		software_usb_status.text = str(res.get("msg", "No se puede instalar todavía."))
+		software_usb_status.add_theme_color_override("font_color", UiStyle.RED)
+		return
+	# Al instalar, el resultado (barra de progreso, cartel verde…) sale en
+	# la pestaña EL ERROR: la pasamos sola para que el jugador lo vea.
+	_rebuild_usb_page()
+	_show_software_tab("error")
+	software_status.text = str(res.get("msg", "Instalando…")) if res is Dictionary else "Instalando…"
+	software_status.add_theme_color_override("font_color", UiStyle.TEXT_DIM)
+
 
 func open_software(pc: Node) -> void:
 	if pc == null or software_panel == null:
@@ -495,6 +807,10 @@ func open_software(pc: Node) -> void:
 		return
 	_soft_pc = pc
 	_soft_done = false
+	_soft_tab = "error"
+	if software_page_usb:
+		software_page_usb.visible = false
+		software_page_error.visible = true
 	var kind := str(pc.get("kind"))
 	software_title.text = "PC %d · %s" % [int(pc.pc_id), Game.PART_TITLES.get(kind, "PC")]
 	# El título toma el color propio de la estación (mismo color que su
@@ -524,6 +840,12 @@ func open_software(pc: Node) -> void:
 	software_panel.visible = true
 	software_host.visible = true
 	Game.is_minigame_open = true
+	# Pestaña PENDRIVE: se prepara al abrir (oculta) para que, en cuanto
+	# metas el pendrive, aparezca sola con su contenido y sus huecos.
+	_clear_usb_page()
+	if _usb_tab_available():
+		_rebuild_usb_page()
+	_show_software_tab("error")
 
 # Rótulo vivo del pendrive (se repinta en cada frame mientras hay ventana).
 # Además de lo que lleva, dice QUÉ LE FALTA a la PC que está abierta: así
@@ -574,6 +896,9 @@ func _refresh_software_pendrive() -> void:
 	software_pendrive.text = text
 	software_pendrive.add_theme_color_override("font_color", color)
 	_refresh_software_usb()
+	# Si el jugador está mirando el pendrive, su contenido cambió: se repinta.
+	if _soft_tab == "usb" and software_page_usb != null and software_page_usb.visible:
+		_rebuild_usb_page()
 
 # Botón del HUECO USB: meter el pendrive en esta PC (si estaba en otra
 # sale solo de ahí) o sacarlo para llevárselo a otra PC.
@@ -595,6 +920,9 @@ func _on_usb_pressed() -> void:
 	var kids: Array = software_content.get_children()
 	if not kids.is_empty() and kids[0].has_method("refresh_usb"):
 		kids[0].call("refresh_usb")
+	# Al meter el pendrive APARECE sola la pestaña PENDRIVE con su
+	# contenido; al sacarlo se vuelve al diagnóstico.
+	_show_software_tab("usb" if Game.pendrive_in(int(_soft_pc.get("pc_id"))) else "error")
 
 # Estado del hueco USB: siempre visible en las PCs que exigen pendrive,
 # con el botón grande de INSERTAR cuando falta (nadie puede perderse eso).
@@ -603,6 +931,12 @@ func _refresh_software_usb() -> void:
 		return
 	var kind := str(_soft_pc.get("kind"))
 	software_usb_row.visible = Game.usb_needed(kind)
+	# La pestaña PENDRIVE solo existe mientras el pendrive está metido aquí:
+	# si se saca, la ventana vuelve sola al diagnóstico.
+	if software_tab_usb:
+		software_tab_usb.visible = _usb_tab_available()
+		if _soft_tab == "usb" and not software_tab_usb.visible:
+			_show_software_tab("error")
 	if not software_usb_row.visible:
 		return
 	var pc_id := int(_soft_pc.get("pc_id"))
@@ -639,6 +973,8 @@ func close_software() -> void:
 		software_host.visible = false
 	_clear_software_content()
 	_soft_pc = null
+	_soft_tab = "error"
+	_clear_usb_page()
 	Game.is_minigame_open = false
 
 func _clear_software_content() -> void:

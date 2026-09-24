@@ -157,20 +157,43 @@ func _minijuegos() -> void:
 	_check(not bool(browser._files[first].stalled), "REANUDAR la reanuda")
 	browser._tick(10.0)
 	_check(bool(browser._files[first].done), "la primera descarga termina")
-	_check(Game.pendrive_has(first), "y baja al pendrive")
+	_check(not Game.pendrive_has(first),
+		"…pero todavia NO esta en el pendrive: hay que guardarlo en su pestaña")
 	_check(Game.repaired.is_empty(), "una sola descarga NO repara la PC")
 	_check(not browser._all_requested_done(), "y siguen faltando archivos")
 
 	for id: String in browser.requested:
 		_download_all(browser, id)
-	_check(browser._all_requested_done(), "el pendrive baja los 5 archivos que piden las otras PCs")
+	_check(browser._all_downloaded(), "el navegador baja los 5 archivos que piden las otras PCs")
+	_check(Game.pendrive.is_empty(), "…pero todavia NO se han guardado en el pendrive")
+	_check(not browser._all_requested_done(), "sin guardar, la PC 1 no se repara")
+	await get_tree().process_frame
+	await get_tree().process_frame
+	_check(hud.software_pendrive.text.contains("POR BAJAR"),
+		"el HUD sigue avisando de que falta, hasta que los guardes")
+
+	# ---- Pestaña PENDRIVE: arrastrar cada descarga y GUARDAR --------
+	_check(hud.software_tab_usb.visible, "con el pendrive metido aparece la pestaña PENDRIVE")
+	_check(not hud.software_page_usb.visible, "…aun oculta: se abre al pincharla")
+	hud._show_software_tab("usb")
+	_check(hud.software_page_usb.visible, "la pestaña PENDRIVE se puede abrir")
+	_check(not hud.software_page_error.visible, "…y la del error queda de fondo")
+	_check(hud.software_usb_items.get_child_count() == 5, "los 5 archivos descargados estan para arrastrar")
+	_check(hud.software_usb_slots.get_child_count() == 5, "y esta PC tiene 5 huecos, uno por archivo")
+	_check(hud.software_usb_install.text.contains("GUARDAR"), "su boton se llama GUARDAR EN EL PENDRIVE")
+	_check(hud.software_usb_install.disabled, "sin arrastrar nada, GUARDAR esta apagado")
+	_check(not hud.usb_drop("slot_%s" % first, "so_mac"), "un archivo NO va al hueco de otro")
+	for id: String in browser.requested:
+		_check(hud.usb_drop("slot_%s" % id, id), "arrastrando %s a su hueco" % id)
+	_check(not hud.software_usb_install.disabled, "con los 5 arrastrados, GUARDAR se activa")
+	hud._on_usb_install()
 	_check(Game.pendrive.size() == 5, "el pendrive queda cargado")
 	await get_tree().process_frame
 	await get_tree().process_frame
 	_check(hud.software_pendrive.text.contains("NVIDIA") and hud.software_pendrive.text.contains("Windows"),
-		"el HUD dice lo que lleva el pendrive mientras baja")
+		"el HUD dice lo que lleva el pendrive")
 	_check(hud.software_pendrive.text.contains("Ya bajaste todo"),
-		"…y, al terminar, confirma que ya bajó todo lo pedido")
+		"…y, al guardarlo todo, confirma que ya bajó todo lo pedido")
 	await get_tree().create_timer(1.2).timeout
 	_check(hud.software_panel.visible == false, "la ventana se sola al terminar")
 	_check(1 in Game.repaired, "con las descargas se repara la PC 1")
@@ -195,6 +218,20 @@ func _minijuegos() -> void:
 	_check(drivers.items.size() == 3, "tres secciones: NVIDIA, AMD e Intel")
 	_check(hud.software_pendrive.text.contains("listo para esta PC"),
 		"con todo ya bajado el cartel confirma que esta PC lo tiene en el pendrive")
+
+	# ---- Pestaña PENDRIVE: arrastrar los drivers a sus huecos ------
+	_check(not (drivers._rows["driver_nvidia"] as Dictionary).has("button"),
+		"el INSTALAR ya no vive en cada fila: se hace en la pestaña PENDRIVE")
+	hud._show_software_tab("usb")
+	_check(hud.software_usb_slots.get_child_count() == 3, "los controladores piden TRES huecos")
+	_check(hud.software_usb_items.get_child_count() == 5, "y el pendrive enseña sus 5 archivos")
+	_check(hud.software_usb_install.disabled, "sin arrastrar nada, INSTALAR esta apagado")
+	_check(not hud.usb_drop("slot_so_mac", "driver_nvidia"), "un driver NO va al hueco de un sistema")
+	_check(not hud.usb_drop("slot_driver_nvidia", "so_mac"), "ni al reves")
+	_check(hud.usb_drop("slot_driver_nvidia", "driver_nvidia"), "cada driver SI entra en SU hueco")
+	_check(hud.software_usb_install.disabled, "con solo uno de los tres, INSTALAR sigue apagado")
+	hud._show_software_tab("error")
+
 	_check(not drivers.is_installed("driver_nvidia"), "todavia no hay ninguno instalado")
 	_check(_pill_text(drivers, "driver_nvidia") == "EN PENDRIVE", "lo que esta en el pendrive se ve EN PENDRIVE")
 	Game.pendrive.erase("driver_nvidia")
@@ -226,14 +263,23 @@ func _minijuegos() -> void:
 	_check(hud.software_pendrive.text.contains("imagen de sistema"),
 		"el cartel avisa que ya hay una imagen de SO en el pendrive")
 	var flow: Node = os_pc.flow
+
+	# ---- Pestaña PENDRIVE: UN hueco para arrastrar el sistema ------
+	hud._show_software_tab("usb")
+	_check(hud.software_usb_slots.get_child_count() == 1, "la PC de sistema pide UN solo hueco")
+	_check(hud.software_usb_install.disabled, "sin el SO arrastrado, INSTALAR esta apagado")
+	_check(not hud.usb_drop("slot_so", "so_mac"), "un SO que NO esta en el pendrive no se arrastra")
 	flow._pick_os("so_mac")
 	_check(str(os_pc.state.get("os_id", "")) == "", "un SO que NO esta en el pendrive no se elige")
 	flow._pick_os("so_windows")
 	_check(str(os_pc.state.get("os_id", "")) == "so_windows", "elige el SO que SI esta en el pendrive")
+	_check(hud.usb_drop("slot_so", "so_windows"), "y se arrastra hasta su hueco")
 	flow._pick_language("es")
 	_check(str(os_pc.state.get("lang", "")) == "es", "elige el idioma")
-	_check(flow._install_button.disabled == false, "con SO e idioma se habilita INSTALAR")
-	flow._start_install()
+	_check(not hud.software_usb_install.disabled, "con SO e idioma se habilita INSTALAR")
+	hud._on_usb_install()
+	_check(hud.software_page_error.visible and not hud.software_page_usb.visible,
+		"INSTALAR vuelve solo a la pestaña EL ERROR para ver el avance")
 	flow.tick(6.0)
 	_check(bool(os_pc.state.get("installed", false)), "la instalacion termina")
 	_check(flow._success.visible, "aparece el cartel verde SISTEMA OPERATIVO INSTALADO")
@@ -317,6 +363,7 @@ func _minijuegos() -> void:
 		hud.free()
 		return
 	_check(swap.flow != null, "trae el flujo para instalar el sistema nuevo")
+	_check(not hud.usb_drop("slot_so", "so_linux"), "NO se arrastra el sistema hasta vaciar el disco")
 	swap._start_remove()
 	_check(not bool(swap.state.get("removed", false)), "sin marcar la casilla NO se borra nada")
 	swap._erase_check.button_pressed = true
@@ -325,9 +372,22 @@ func _minijuegos() -> void:
 	swap._process(2.0)
 	_check(bool(swap.state.get("removed", false)), "el sistema viejo queda fuera")
 	_check(swap.flow.visible, "y aparece el instalador del sistema nuevo")
-	swap.flow._pick_os("so_linux")
+	# ---- Pestaña PENDRIVE: con el disco ya vacío, arrastrar e instalar
+	hud._show_software_tab("usb")
+	_check(hud.software_usb_slots.get_child_count() == 1, "cambia de sistema pide UN hueco para el SO nuevo")
+	_check(not swap.usb_ready(), "con el hueco vacío la pestaña no deja instalar")
+	_check(hud.software_usb_install.disabled, "…así que INSTALAR está apagado")
+	_check(hud.usb_drop("slot_so", "so_linux"), "con el disco vacio SI se arrastra hasta su hueco")
+	_check(not hud.software_usb_install.disabled, "con el SO en su hueco, INSTALAR se activa")
+	var errs_swap := Game.errors
+	hud._on_usb_install()
+	_check(Game.errors == errs_swap, "sin idioma elegido solo avisa, sin penalizar")
+	_check(hud.software_page_usb.visible, "…y el aviso se queda en la propia pestaña PENDRIVE")
 	swap.flow._pick_language("pt")
-	swap.flow._start_install()
+	_check(str(swap.state.get("lang", "")) == "pt", "elige el idioma del sistema nuevo")
+	hud._on_usb_install()
+	_check(hud.software_page_error.visible and not hud.software_page_usb.visible,
+		"INSTALAR vuelve a la pestaña EL ERROR para ver el cartel verde")
 	swap.flow.tick(6.0)
 	_check(bool(swap.state.get("installed", false)), "el sistema nuevo queda instalado")
 	_check(swap.flow._success.visible, "con su cartel verde final")

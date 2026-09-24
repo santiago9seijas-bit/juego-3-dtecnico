@@ -15,6 +15,8 @@ const CYAN_SOFT := Color("7ef9ff")
 const MAGENTA := Color("ff2e88")
 const TEXT := Color("d7f4ff")
 const TEXT_DIM := Color("6f8ba0")
+const AMBER := Color("ffb020")
+const RED := Color("ff5a5a")
 const GRID_SHADER := "res://shaders/menu_grid.gdshader"
 
 static var _theme: Theme = null

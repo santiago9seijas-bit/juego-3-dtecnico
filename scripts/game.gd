@@ -203,8 +203,8 @@ const PART_INFO := {
 	},
 	# Fichas del mundo de software (sección 2).
 	"download": {
-		"use": "Por el navegador se bajan de internet los controladores de fabricante y las imágenes de los sistemas operativos; todo queda guardado en el PENDRIVE que luego se lleva a las otras PCs.",
-		"fails": "Sin descargas no hay nada que instalar: los demás equipos se quedan esperando un driver o un sistema que nunca llega. Además, sin el PENDRIVE metido en la PC de internet no se baja nada y las ventanas emergentes abiertas dejan entrar malware.",
+		"use": "Es LA PC DE LA QUE SALEN los archivos del nivel: por el navegador se bajan de internet los controladores de fabricante (NVIDIA, AMD, Intel) y las imágenes de los sistemas operativos, y en la pestaña PENDRIVE se arrastran a su hueco y se guardan para llevarlos a las otras PCs.",
+		"fails": "Sin descargas no hay nada que instalar: los demás equipos se quedan esperando un driver o un sistema que nunca llega. Además, sin el PENDRIVE metido en la PC de internet no se baja nada, lo descargado sin GUARDAR en el pendrive no se lleva a ninguna parte y las ventanas emergentes abiertas dejan entrar malware.",
 	},
 	"drivers": {
 		"use": "Un controlador (driver) traduce lo que pide el sistema a lo que entiende el hardware: gráfica, red, sonido. Se instalan por secciones de fabricante: NVIDIA, AMD e Intel.",
@@ -325,12 +325,12 @@ const SOFTWARE_TUTORIAL_TASKS := {
 }
 const SOFTWARE_TUTORIALS_MENU_TEXT := \
 	"Siete prácticas del mundo de software, cada una en su habitación y sin cronómetro, sin puntaje y sin penalizaciones.\n\n" + \
-	"DESCARGAS: se abre el navegador con SOLO los archivos que piden las otras PCs y cada fila lleva su etiqueta «→ lo pide PC X». Antes de bajar hay que meter el PENDRIVE en esa PC con su botón INSERTAR. Después pulsa DESCARGAR, aguanta la barra de progreso (a la mitad puede cortarse y toca pulsar REANUDAR) y cierra las ventanas emergentes con su botón CERRAR.\n\n" + \
-	"CONTROLADORES: la PC trae tres secciones (NVIDIA, AMD e Intel) y un marcador grande de cuántos llevas. Cada pastilla dice EN PENDRIVE o FALTA, y el pendrive tiene que estar metido en esta PC para instalar. En el nivel, una sección que dice FALTA significa que ese driver aún no se ha descargado en la PC de INTERNET.\n\n" + \
-	"SISTEMA OPERATIVO: con el pendrive metido en la PC se elige el sistema, se elige el idioma y se espera la instalación hasta el cartel verde final.\n\n" + \
+	"DESCARGAS: se abre el navegador con SOLO los archivos que piden las otras PCs y cada fila lleva su etiqueta «→ lo pide PC X». Antes de bajar hay que meter el PENDRIVE en esa PC con su botón INSERTAR. Después pulsa DESCARGAR, aguanta la barra de progreso (a la mitad puede cortarse y toca pulsar REANUDAR) y cierra las ventanas emergentes con su botón CERRAR. Lo bajado se arrastra en la pestaña PENDRIVE a su hueco y se guarda con GUARDAR EN EL PENDRIVE.\n\n" + \
+	"CONTROLADORES: la PC trae tres secciones (NVIDIA, AMD e Intel) y un marcador grande de cuántos llevas. Cada pastilla dice EN PENDRIVE o FALTA, y el pendrive tiene que estar metido en esta PC para instalar. En la pestaña PENDRIVE se arrastra cada driver al hueco de su sección y se pulsa INSTALAR. En el nivel, una sección que dice FALTA significa que ese driver aún no se ha descargado en la PC de INTERNET.\n\n" + \
+	"SISTEMA OPERATIVO: con el pendrive metido en la PC se abre la pestaña PENDRIVE, se arrastra el sistema a su hueco, se elige el idioma y se espera la instalación hasta el cartel verde final.\n\n" + \
 	"VIRUS: un marcador grande va diciendo en qué paso estás. Primero ANALIZA el disco y después arrastra cada archivo infectado hasta la CUARENTENA, sin tocar los buenos.\n\n" + \
 	"PROCESOS: el administrador de tareas con la PC infestada. La regla es una sola: termina SOLO los procesos con más del 50% de CPU. Si matas uno del sistema pierdes puntos, así que mira la columna de CPU antes de pulsar.\n\n" + \
-	"CAMBIAR DE SISTEMA: se confirma el borrado del sistema viejo y, con el pendrive metido en la PC, se instala el nuevo.\n\n" + \
+	"CAMBIAR DE SISTEMA: se confirma el borrado del sistema viejo y, con el pendrive metido en la PC, el nuevo se arrastra en la pestaña PENDRIVE y se instala.\n\n" + \
 	"ANUNCIOS: se abren varias ventanas emergentes a la vez y hay que cerrarlas todas con su ✕. Cuidado: una ✕ es FALSA y en vez de cerrar abre OTRA ventana; y si acumulas 4 abiertas a la vez entra malware."
 
 # ------------------------------------------------------------------
@@ -669,12 +669,12 @@ const MECHANIC_TUTORIAL_TEXT := {
 
 # Texto de los tutoriales del mundo de software (uno por minijuego).
 const SOFTWARE_TUTORIAL_TEXT := {
-	"download": "Entrarás a una habitación sin cronómetro con la PC de INTERNET. Primero pulsa INSERTAR PENDRIVE en la barra de arriba: sin el pendrive metido no se baja nada. Verás SOLO los archivos que piden las otras PCs, cada uno con su etiqueta «→ lo pide PC X». Pulsa DESCARGAR, espera la barra de progreso (a la mitad puede cortarse la conexión y tendrás que pulsar REANUDAR) y cierra las ventanas emergentes con su botón CERRAR. El archivo baja solo al pendrive.",
-	"drivers": "Entrarás a una habitación sin cronómetro con una PC que no reconoce su hardware. Primero pulsa INSERTAR PENDRIVE (el pendrive ya viene cargado con los dos drivers de la práctica). Verás un marcador grande con el paso en el que estás y tres secciones de fabricante (NVIDIA, AMD e Intel): pulsa INSTALAR en cada una y pasa a INSTALADO. En el nivel real, una sección que dice FALTA significa que ese driver todavía no está en el pendrive y hay que bajarlo en la PC de INTERNET.",
-	"os_install": "Entrarás a una habitación sin cronómetro con una PC que no tiene sistema operativo. Primero pulsa INSERTAR PENDRIVE (trae las imágenes de la práctica). El instalador va en tres pasos numerados: eliges el sistema que ya esté en el pendrive, eliges el idioma y el teclado, y pulsas INSTALAR. Verás la mini-animación de la instalación y, al terminar, el cartel verde de SISTEMA OPERATIVO INSTALADO.",
+	"download": "Entrarás a una habitación sin cronómetro con la PC de INTERNET. Primero pulsa INSERTAR PENDRIVE en la barra de arriba: sin el pendrive metido no se baja nada. Verás SOLO los archivos que piden las otras PCs, cada uno con su etiqueta «→ lo pide PC X». Pulsa DESCARGAR, espera la barra de progreso (a la mitad puede cortarse la conexión y tendrás que pulsar REANUDAR) y cierra las ventanas emergentes con su botón CERRAR. Al meter el pendrive aparece la pestaña PENDRIVE: ahí arrastras cada descarga a su hueco y pulsas GUARDAR EN EL PENDRIVE.",
+	"drivers": "Entrarás a una habitación sin cronómetro con una PC que no reconoce su hardware. Primero pulsa INSERTAR PENDRIVE (el pendrive ya viene cargado con los dos drivers de la práctica). El diagnóstico está en la pestaña EL ERROR, con un marcador grande y tres secciones de fabricante (NVIDIA, AMD e Intel); el trabajo se hace en la pestaña PENDRIVE: arrastras cada driver al hueco de su sección y pulsas INSTALAR. En el nivel real, una sección que dice FALTA significa que ese driver todavía no está en el pendrive y hay que bajarlo en la PC de INTERNET.",
+	"os_install": "Entrarás a una habitación sin cronómetro con una PC que no tiene sistema operativo. Primero pulsa INSERTAR PENDRIVE (trae las imágenes de la práctica). En la pestaña EL ERROR eliges el idioma y el teclado; en la pestaña PENDRIVE arrastras el sistema que quieras (Windows, macOS o Linux) hasta su hueco y pulsas INSTALAR. Verás la mini-animación de la instalación y, al terminar, el cartel verde de SISTEMA OPERATIVO INSTALADO.",
 	"virus": "Entrarás a una habitación sin cronómetro con una PC infectada. Primero pulsa ANALIZAR para que el antivirus revise los archivos y los marque; después arrastra cada archivo infectado hasta la CUARENTENA. En esta práctica son dos virus y no hay archivos buenos en medio, pero en el nivel los archivos limpios están ahí y arrastrarlos por error resta puntos.",
 	"processes": "Entrarás a una habitación sin cronómetro con una PC infestada. Se abre el ADMINISTRADOR DE TAREAS con la lista de procesos y su uso de CPU. La regla es una sola: termina SOLO los procesos que consumen más del 50% de CPU; los del sistema (baja CPU) déjalos correr. Si terminas uno del sistema pierdes puntos y la estabilidad de la PC baja. En esta práctica son dos procesos maliciosos y no hay procesos con nombre engañoso.",
-	"os_swap": "Entrarás a una habitación sin cronómetro con una PC que trae un sistema viejo. Primero marca la casilla de confirmación y pulsa DESINSTALAR para vaciar la partición; después, con el disco vacío, pulsa INSERTAR PENDRIVE, elige el sistema nuevo, el idioma y pulsa INSTALAR hasta ver el cartel verde final.",
+	"os_swap": "Entrarás a una habitación sin cronómetro con una PC que trae un sistema viejo. Primero marca la casilla de confirmación y pulsa DESINSTALAR para vaciar la partición; después, con el disco vacío, pulsa INSERTAR PENDRIVE, elige el idioma en la pestaña EL ERROR y, en la pestaña PENDRIVE, arrastra el sistema nuevo hasta su hueco y pulsa INSTALAR hasta ver el cartel verde final.",
 	"ads": "Entrarás a una habitación sin cronómetro con una PC que se llena de ventanas emergentes de publicidad. Se abren varias a la vez y hay que cerrarlas todas con su botón ✕ CERRAR. Atención: una ✕ es FALSA y en vez de cerrar la ventana abre OTRA más; además, si llegas a tener 4 abiertas a la vez entra malware. Un marcador grande te dice cuántas llevas cerradas y cuántas quedan.",
 }
 
@@ -705,18 +705,19 @@ func software_level_info_text() -> String:
 		"[color=#19e6ff][b]QUÉ HAY EN ESTE NIVEL[/b][/color]\n" +
 		"Una habitación con %d computadoras y un cronómetro de %d segundos. No hay estanterías ni papelera: no se cargan repuestos, se mueve el PENDRIVE que baja los archivos. Cada tarea resuelta suma %d puntos y devuelve %d segundos.\n\n" +
 		"[color=#ff6b8a][b]CÓMO JUGAR[/b][/color]\n" +
+		"Cada ventana de PC tiene [color=#ffb020][b]DOS PESTAÑAS[/b][/color]: [color=#ffb020][b]EL ERROR[/b][/color] (el diagnóstico y el hueco USB) y, en cuanto metes el pendrive, [color=#19e6ff][b]PENDRIVE[/b][/color] (su contenido a la izquierda y los huecos de esa PC a la derecha: se arrastra de izquierda a derecha y se pulsa INSTALAR).\n\n" +
 		"[color=#19e6ff][b]1[/b][/color]\n" +
-		"   E sobre la PC [color=#19e6ff][b]INTERNET[/b][/color]: pulsa [color=#ffb020][b]INSERTAR PENDRIVE[/b][/color] (sin él no baja nada) y se abre el navegador con SOLO los %d archivos que piden las otras PCs: cada fila lleva su etiqueta «lo pide PC X». Cierra las ventanas emergentes con su botón CERRAR y, si una descarga se corta, pulsa REANUDAR. Todo baja al pendrive.\n" +
+		"   E sobre la PC [color=#19e6ff][b]INTERNET[/b][/color]: pulsa [color=#ffb020][b]INSERTAR PENDRIVE[/b][/color] (sin él no baja nada) y se abre el navegador con SOLO los %d archivos que piden las otras PCs: cada fila lleva su etiqueta «lo pide PC X». Cierra las ventanas emergentes con su botón CERRAR y, si una descarga se corta, pulsa REANUDAR. Después, en la pestaña PENDRIVE, arrastra cada descarga a su hueco y pulsa GUARDAR EN EL PENDRIVE.\n" +
 		"[color=#19e6ff][b]2[/b][/color]\n" +
-		"   E sobre la PC [color=#ff2e88][b]CONTROLADORES[/b][/color]: mete el pendrive ahí y hay tres secciones (NVIDIA, AMD e Intel). Instala los que digan EN PENDRIVE; los que digan FALTA hay que volver a bajarlos en la PC de internet.\n" +
+		"   E sobre la PC [color=#ff2e88][b]CONTROLADORES[/b][/color]: mete el pendrive ahí y hay tres secciones (NVIDIA, AMD e Intel). En la pestaña PENDRIVE arrastra cada driver al hueco de su sección y pulsa INSTALAR; los que digan FALTA hay que volver a bajarlos en la PC de internet.\n" +
 		"[color=#19e6ff][b]3[/b][/color]\n" +
-		"   E sobre la PC [color=#19e6ff][b]SISTEMA OPERATIVO[/b][/color]: con el pendrive metido elige el sistema, el idioma y pulsa INSTALAR hasta ver el cartel verde.\n" +
+		"   E sobre la PC [color=#19e6ff][b]SISTEMA OPERATIVO[/b][/color]: con el pendrive metido, arrastra el sistema a su hueco en la pestaña PENDRIVE, elige el idioma y pulsa INSTALAR hasta ver el cartel verde.\n" +
 		"[color=#19e6ff][b]4[/b][/color]\n" +
 		"   E sobre la PC [color=#ff2e88][b]VIRUS[/b][/color]: pulsa ANALIZAR y arrastra los archivos infectados a la CUARENTENA sin tocar los buenos.\n" +
 		"[color=#19e6ff][b]5[/b][/color]\n" +
 		"   E sobre la PC [color=#19e6ff][b]PROCESOS[/b][/color]: termina SOLO los procesos con más del 50%% de CPU; los del sistema se quedan corriendo aunque su nombre dé desconfianza.\n" +
 		"[color=#19e6ff][b]6[/b][/color]\n" +
-		"   E sobre la PC [color=#ff2e88][b]CAMBIAR DE SISTEMA[/b][/color]: confirma el borrado del sistema viejo e instala el nuevo con el pendrive metido en esa PC.\n" +
+		"   E sobre la PC [color=#ff2e88][b]CAMBIAR DE SISTEMA[/b][/color]: confirma el borrado del sistema viejo e instala el nuevo arrastrándolo en la pestaña PENDRIVE, con esa PC restando tiempo.\n" +
 		"[color=#19e6ff][b]7[/b][/color]\n" +
 		"   E sobre la PC [color=#19e6ff][b]ANUNCIOS[/b][/color]: cierra TODAS las ventanas emergentes con su ✕. Cuidado: una ✕ es FALSA y abre otra ventana, y con 4 abiertas a la vez entra malware.\n\n" +
 		"[color=#3ce08a][b]Objetivo[/b][/color]: resolver las %d tareas antes de que el reloj llegue a cero.\n\n" +

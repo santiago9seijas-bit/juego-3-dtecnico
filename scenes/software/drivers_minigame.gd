@@ -36,12 +36,12 @@ func setup(new_state: Dictionary, task: Dictionary, new_pc_id := 0) -> void:
 	add_child(SwUI.steps([
 		{"n": 1, "text": "MIRA LA PASTILLA de cada sección: FALTA significa que ese driver todavía no está en el pendrive."},
 		{"n": 2, "text": "SI ALGUNO FALTA: mete el pendrive en la PC de INTERNET, descárgalo ahí y vuelve con él."},
-		{"n": 3, "text": "PENDRIVE CONECTADO AQUÍ: pulsa INSTALAR en cada sección que diga EN PENDRIVE."},
+		{"n": 3, "text": "PENDRIVE CONECTADO AQUÍ: pasa a la pestaña PENDRIVE, arrastra cada driver a su hueco y pulsa INSTALAR."},
 	]))
 	if Game.tutorial_mode:
 		add_child(SwUI.rich(
 			"[color=#ffb020]En el nivel real[/color] hay tres secciones y los drivers se bajan en la otra PC; " +
-			"aquí el pendrive ya viene cargado."))
+			"aquí el pendrive ya viene cargado y todo se hace en la pestaña PENDRIVE."))
 
 	for id in items:
 		var info: Dictionary = Game.SW_ITEMS.get(id, {})
@@ -56,14 +56,12 @@ func setup(new_state: Dictionary, task: Dictionary, new_pc_id := 0) -> void:
 		row.add_child(pill)
 
 		var progress := SwUI.bar(UiStyle.CYAN, 14.0)
-		progress.custom_minimum_size = Vector2(130, 14)
+		progress.custom_minimum_size = Vector2(150, 14)
 		row.add_child(progress)
 
-		var button := SwUI.button("INSTALAR", Vector2(140, 38), 15)
-		button.pressed.connect(_install.bind(id))
-		row.add_child(button)
-
-		_rows[id] = {"pill": pill, "bar": progress, "button": button}
+		# El botón de INSTALAR vive en la pestaña PENDRIVE: aquí solo se
+		# ve el estado de cada sección (se instala arrastrando allí).
+		_rows[id] = {"pill": pill, "bar": progress}
 		add_child(row)
 
 	_status = SwUI.label("Empieza por la primera sección del fabricante.", 17, UiStyle.TEXT_DIM)
@@ -114,6 +112,78 @@ func _all_done() -> bool:
 			return false
 	return true
 
+# ------------------------------------------------------------------
+# Pestaña PENDRIVE: un hueco por sección + el botón INSTALAR.
+# Los drivers se ARRASTRAN desde el pendrive (izquierda) hasta el hueco
+# de su fabricante (derecha) y luego se le da a INSTALAR.
+# ------------------------------------------------------------------
+func usb_spec() -> Dictionary:
+	var slots := []
+	var titles := {}
+	for id in items:
+		var info: Dictionary = Game.SW_ITEMS.get(id, {})
+		slots.append({
+			"id": "slot_%s" % id,
+			"title": "Sección %s" % str(info.get("vendor", "DRIVER")),
+			"hint": "%s · %s" % [info.get("name", id), info.get("file", "")],
+			"accept": [id],
+		})
+		titles[id] = str(info.get("name", id))
+	return {
+		"slots": slots,
+		"source": Game.pendrive,
+		"source_titles": titles,
+		"install_text": "INSTALAR",
+		"hint": "Arrastra cada driver al hueco de su sección y pulsa INSTALAR.",
+	}
+
+# Huecos rellenos: lo que ya se arrastró + los drivers ya instalados.
+func usb_drops() -> Dictionary:
+	var out := {}
+	var drops: Dictionary = state.get("drops", {})
+	for id in items:
+		var slot := "slot_%s" % id
+		if drops.has(slot):
+			out[slot] = str(drops[slot])
+		elif is_installed(id):
+			out[slot] = id
+	return out
+
+func usb_drop(slot_id: String, item_id: String) -> bool:
+	if item_id not in items or slot_id != "slot_%s" % item_id:
+		return false
+	if item_id not in Game.pendrive:
+		return false
+	var drops: Dictionary = state.get("drops", {})
+	drops[slot_id] = item_id
+	state.drops = drops
+	_refresh()
+	return true
+
+func usb_ready() -> bool:
+	if not _usb_ok():
+		return false
+	var drops := usb_drops()
+	for id in items:
+		if not drops.has("slot_%s" % id):
+			return false
+	return true
+
+func usb_install() -> Dictionary:
+	if not _usb_ok():
+		return {"ok": false, "msg": "✗ El pendrive NO está metido en esta PC: pulsa INSERTAR PENDRIVE."}
+	var drops := usb_drops()
+	var missing := []
+	for id in items:
+		if not drops.has("slot_%s" % id):
+			missing.append(str(Game.SW_ITEMS.get(id, {}).get("short", id)))
+	if not missing.is_empty():
+		return {"ok": false, "msg": "Arrastra primero: falta %s." % ", ".join(missing)}
+	for id in items:
+		_install(id)
+	state.erase("drops")
+	return {"ok": true, "msg": "Controladores instalados. Mira la lista de la pestaña EL ERROR."}
+
 func _refresh() -> void:
 	var usb := _usb_ok()
 	for id in _rows:
@@ -137,17 +207,6 @@ func _refresh() -> void:
 			(row.bar as ProgressBar).value = 0.0
 		pill_text.add_theme_color_override("font_color", color)
 		_style_pill(pill, color)
-		var button: Button = row.button
-		button.disabled = done or not on_deck or not usb
-		if done:
-			button.text = "INSTALADO ✓"
-		elif not usb:
-			# Sin el pendrive dentro de ESTA PC no hay nada que instalar.
-			button.text = "METE EL PENDRIVE"
-		elif on_deck:
-			button.text = "INSTALAR"
-		else:
-			button.text = "SIN DRIVER"
 	if not usb and not _all_done():
 		_set_status("✗ El pendrive NO está metido en esta PC: pulsa INSERTAR PENDRIVE (arriba).", Color(1, 0.45, 0.3))
 	_refresh_stage()

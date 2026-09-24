@@ -87,7 +87,12 @@ static func pill(text: String, color := UiStyle.CYAN) -> PanelContainer:
 	style.content_margin_top = 3.0
 	style.content_margin_bottom = 3.0
 	panel.add_theme_stylebox_override("panel", style)
-	panel.add_child(label(text, 13, color))
+	# SIN autowrap: el mínimo de un Label con autowrap es de 1px de ancho,
+	# y en una fila el HBox le daría exactamente 1px → la pastilla se
+	# convertiría en una columna de texto de 300px de alto.
+	var inner := label(text, 13, color)
+	inner.autowrap_mode = TextServer.AUTOWRAP_OFF
+	panel.add_child(inner)
 	return panel
 
 static func button(text: String, min_size := Vector2(170, 40), font := 15) -> Button:
@@ -115,7 +120,9 @@ static func card(color := UiStyle.CYAN, bg := Color("0a0f16")) -> PanelContainer
 
 static func bar(color: Color, height := 16.0) -> ProgressBar:
 	var b := ProgressBar.new()
-	b.custom_minimum_size = Vector2(0, height)
+	# 80px mínimos: si la barra cae en una fila sin hueco para expandirse,
+	# se vería como una línea de 1px y no se leería.
+	b.custom_minimum_size = Vector2(80, height)
 	b.max_value = 100.0
 	b.value = 0.0
 	b.show_percentage = false

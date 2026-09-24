@@ -134,6 +134,14 @@ func _build() -> void:
 	_label.modulate = accent
 	_label.position = Vector3(0, 0.95, 0)
 	add_child(_label)
+	# La PC de DESCARGAS es la fuente de TODO: de ahí salen los drivers y
+	# las imágenes de sistema que luego se llevan en el pendrive. Se marca
+	# con una segunda línea para que se vea de un vistazo en la sala.
+	if kind == "download":
+		_label.text = "INTERNET\nDE AQUÍ SALEN DRIVERS Y SISTEMAS"
+		_label.font_size = 34
+		_label.position = Vector3(0, 1.12, 0)
+		_label.vertical_alignment = VERTICAL_ALIGNMENT_CENTER
 
 	# Tira LED en el borde frontal del escritorio: da color a la estación
 	# (mismo tono que su pantalla y su rótulo) para leer las siete PCs de un

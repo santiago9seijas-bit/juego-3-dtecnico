@@ -4,8 +4,9 @@ var failures := 0
 
 func _ready() -> void:
 	_check(Game.state == Game.State.MENU, "empieza en MENU")
-	_check(Game.unlocked_levels == 1, "solo la seccion 1 esta habilitada")
+	_check(Game.unlocked_levels == 2, "las secciones 1 (hardware) y 2 (software) estan habilitadas")
 	_check(Game.LEVELS.size() == 6, "la seccion 1 se divide en 6 niveles")
+	_check(Game.SOFTWARE_LEVELS.size() == 1, "la seccion 2 se divide en 1 solo nivel")
 
 	# Nivel 1: sala pequena, piezas basicas, 3 PCs, sin mecánicas técnicas.
 	Game.start_level(1)
@@ -133,7 +134,7 @@ func _check_all_levels() -> void:
 	# Terminar un nivel no abre otras secciones del menú.
 	_finish_level()
 	_check(Game.state == Game.State.DONE, "el tiempo agotado termina la partida")
-	_check(Game.unlocked_levels == 1, "los niveles no desbloquean otras secciones")
+	_check(Game.unlocked_levels == 2, "los niveles no desbloquean otras secciones")
 
 # Mochila: las piezas dañadas se marcan y la papelera las bota.
 func _check_trash() -> void:

@@ -74,7 +74,15 @@ func _setup_level() -> void:
 	# Todos los niveles se juegan en salas cerradas (sin escenario grande).
 	_set_environment_visible(false)
 	if Game.tutorial_mode:
-		_setup_tutorial_room()
+		# Cada mundo tiene su propia sala de tutorial.
+		if Game.tutorial_part in Game.SOFTWARE_TUTORIALS:
+			_setup_software_tutorial_room()
+		else:
+			_setup_tutorial_room()
+		return
+	# Mundo de software: la sala con las SIETE computadoras.
+	if Game.uses_software_room():
+		_setup_software_room()
 		return
 	if Game.uses_medium_room():
 		# Niveles 5-6: sala mediana, 5 PCs en fila, cajas juntas y la
@@ -134,6 +142,80 @@ func _setup_tutorial_room() -> void:
 	_spawn_tutorial_title()
 	player.position = TUTORIAL_SPAWN
 	player.velocity = Vector3.ZERO
+
+# ------------------------------------------------------------------
+# MUNDO DE SOFTWARE (sección 2): una sala grande cerrada con SIETE
+# escritorios en fila, cada uno con su PC y su minijuego:
+#   · INTERNET (descargas) · CONTROLADORES · SISTEMA OPERATIVO
+#   · VIRUS · PROCESOS · CAMBIAR DE SISTEMA · ANUNCIOS
+# Sin estanterías ni papelera: aquí no se cargan repuestos, se mueve
+# el pendrive que baja la PC de internet.
+# ------------------------------------------------------------------
+const SW_ROOM_HALF := 7.0
+const SW_DESK_Z := -4.4
+const SW_DESK_GAP := 1.95
+
+func _setup_software_room() -> void:
+	_build_closed_room(SW_ROOM_HALF)
+	var n := Game.task_count
+	var start := -float(n - 1) * SW_DESK_GAP * 0.5
+	for i in n:
+		var pos := Vector3(start + float(i) * SW_DESK_GAP, 0.0, SW_DESK_Z)
+		_spawn_desk(pos)
+		level_root.add_child(_make_software_pc(Game.current_tasks[i], pos))
+	_spawn_room_sign("MUNDO 2 · PROBLEMAS DE SOFTWARE", Vector3(0.0, 2.75, -(SW_ROOM_HALF - 0.3)))
+	_spawn_wall_screens()
+	player.position = LEVEL_SPAWN
+	player.velocity = Vector3.ZERO
+
+# Tutorial de una tarea de software: un solo escritorio con su PC.
+func _setup_software_tutorial_room() -> void:
+	_build_closed_room(ROOM_HALF)
+	_spawn_desk(TUTORIAL_DESK_POS)
+	level_root.add_child(_make_software_pc(Game.current_tasks[0], TUTORIAL_DESK_POS))
+	_spawn_room_sign("TALLER DE SOFTWARE", Vector3(0.0, 2.75, -(ROOM_HALF - 0.3)))
+	_spawn_tutorial_title()
+	player.position = TUTORIAL_SPAWN
+	player.velocity = Vector3.ZERO
+
+func _make_software_pc(task: Dictionary, pos: Vector3) -> Node:
+	var pc := SoftwarePC.new()
+	pc.pc_id = int(task.get("id", 0))
+	pc.kind = str(task.get("kind", "download"))
+	pc.symptom = str(task.get("symptom", ""))
+	pc.task = task
+	# El estado (descargas hechas, drivers instalados, archivos en
+	# cuarentena…) vive en la propia PC: cerrar la ventana no lo pierde.
+	pc.state = {}
+	pc.position = pos + Vector3(0, 1.6, 0)
+	return pc
+
+# Rótulo fijo en la pared norte (no gira con la cámara).
+func _spawn_room_sign(text: String, pos: Vector3) -> void:
+	var label := Label3D.new()
+	label.text = text
+	label.font_size = 54
+	label.outline_size = 10
+	label.modulate = Color(0.15, 0.9, 1.0)
+	label.position = pos
+	level_root.add_child(label)
+
+# Pantallas encendidas en la pared norte, para que la sala se vea de taller.
+func _spawn_wall_screens() -> void:
+	var wall_z := -(SW_ROOM_HALF - 0.28)
+	for x: float in [-4.2, 4.2]:
+		var mesh := BoxMesh.new()
+		mesh.size = Vector3(2.0, 1.2, 0.06)
+		var mat := StandardMaterial3D.new()
+		mat.albedo_color = Color(0.03, 0.06, 0.1)
+		mat.emission_enabled = true
+		mat.emission = Color(0.05, 0.5, 0.7)
+		mat.emission_energy_multiplier = 0.8
+		mesh.material = mat
+		var screen := MeshInstance3D.new()
+		screen.mesh = mesh
+		screen.position = Vector3(x, 2.3, wall_z)
+		level_root.add_child(screen)
 
 func _make_pc(task: Dictionary, pos: Vector3) -> Node:
 	var pc: Node = _pc_scene.instantiate()

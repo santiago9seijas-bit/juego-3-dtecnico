@@ -86,6 +86,14 @@ const PART_TITLES := {
 	"volt": "Voltímetro",
 	"solder": "Soldadura con Cautín",
 	"trash": "Papelera",
+	# Mundo de software (sección 2): no son piezas, son tareas de PC.
+	"download": "Descargas",
+	"drivers": "Controladores",
+	"os_install": "Sistema Operativo",
+	"virus": "Virus",
+	"processes": "Procesos del Sistema",
+	"os_swap": "Cambiar de Sistema",
+	"ads": "Anuncios",
 }
 
 const PART_VARIANTS := {
@@ -138,7 +146,9 @@ const SECTION_INFO := [
 	"Recorrerás la sala de servicio, examinarás cada computadora averiada, tomarás el repuesto correcto de la estantería y lo instalarás en el slot dañado. Juegas contra el reloj: cada reparación suma puntos y te devuelve unos segundos de tiempo.\n\n" +
 	"Está disponible en modo tutorial, sin prisa y sin penalizaciones, y en modo nivel con cronómetro para poner a prueba lo aprendido.",
 	"Instalación de sistemas operativos, controladores, limpieza de virus y optimización del equipo.\n\n" +
-	"[color=#6f8ba0]Sección bloqueada: se habilitará más adelante.[/color]",
+	"Mundo de SOFTWARE: una sala con SIETE computadoras y ningún repuesto que cargar. El técnico mueve un PENDDRIVE: en la PC de INTERNET se bajan los drivers (NVIDIA, AMD, Intel) y las imágenes de los sistemas, y después se llevan a las demás PCs.\n\n" +
+	"Cada PC enseña un minijuego: instalar controladores por secciones de fabricante, instalar un sistema operativo (idioma y animación final), limpiar virus, terminar procesos, cambiar un sistema por otro y desinstalar los programas de anuncios.\n\n" +
+	"Un solo nivel contra el cronómetro (7 tareas) y tutoriales propios para practicar cada minijuego sin prisa.",
 	"Montaje y mantenimiento de servidores: red, almacenamiento, usuarios y copias de seguridad.\n\n" +
 	"[color=#6f8ba0]Sección bloqueada: se habilitará más adelante.[/color]",
 ]
@@ -191,6 +201,35 @@ const PART_INFO := {
 		"use": "Aquí se botan las piezas dañadas que sacas de las computadoras: la mochila solo admite %d piezas y las dañadas ocupan lugar." % MAX_CARRIED,
 		"fails": "Si no las botas, la mochila se llena y no puedes sacar ni instalar otra pieza: te bloqueas a mitad de reparación.",
 	},
+	# Fichas del mundo de software (sección 2).
+	"download": {
+		"use": "Por el navegador se bajan de internet los controladores de fabricante y las imágenes de los sistemas operativos; todo queda guardado en el PENDRIVE que luego se lleva a las otras PCs.",
+		"fails": "Sin descargas no hay nada que instalar: los demás equipos se quedan esperando un driver o un sistema que nunca llega. Además, los anuncios falsos instalan malware y las ventanas emergentes abiertas dejan entrar más.",
+	},
+	"drivers": {
+		"use": "Un controlador (driver) traduce lo que pide el sistema a lo que entiende el hardware: gráfica, red, sonido. Se instalan por secciones de fabricante: NVIDIA, AMD e Intel.",
+		"fails": "Sin controladores la PC no da imagen de aceleración, no conecta a la red, no suena y no aprovecha el hardware que lleva montado.",
+	},
+	"os_install": {
+		"use": "El sistema operativo es el programa base que arranca el equipo y sobre el que corre todo lo demás: hay que elegirlo, escoger idioma y teclado y dejar que copie los archivos.",
+		"fails": "Una PC sin sistema operativo no arranca ni acepta programas: solo muestra un aviso de disco no encontrado.",
+	},
+	"virus": {
+		"use": "El antivirus analiza los archivos del disco, separa los infectados y los pone en cuarentena para no borrar por error nada bueno.",
+		"fails": "Con virus, el equipo cifra archivos, roba contraseñas, usa la PC para minar criptomonedas y se vuelve lento e inestable.",
+	},
+	"processes": {
+		"use": "Un proceso es un programa en ejecución: el sistema arranca los suyos y el usuario abre los demás. El administrador de tareas los lista con su uso de CPU.",
+		"fails": "Con procesos de más la PC se pone lenta, se traba y se calienta: los programas abren mal y hasta puede dejar de responder.",
+	},
+	"os_swap": {
+		"use": "Cambiar de sistema operativo consiste en desinstalar el viejo (borrando su partición) e instalar otro distinto desde el pendrive.",
+		"fails": "Un sistema desactualizado ya no recibe parches, no corre los programas modernos y obliga a cambiar el equipo entero si no se sustituye.",
+	},
+	"ads": {
+		"use": "El desinstalador elimina los programas que el usuario no pidió: barras de ofertas, buscadores, reproductores de más y todo lo que solo muestra publicidad.",
+		"fails": "Esos programas abren ventanas solos, cambian el buscador, ralentizan el arranque y hasta instalan otros programas sin permiso.",
+	},
 }
 
 # Piezas disponibles: los niveles 1-2 NO traen procesador ni fancooler
@@ -212,6 +251,86 @@ const LEVELS := [
 	{"pc_count": 5, "time": 270.0, "parts": ALL_PARTS, "room": "medium", "volt": true, "solder": true},
 	{"pc_count": 5, "time": 330.0, "parts": ALL_PARTS, "room": "medium", "volt": true, "solder": true},
 ]
+
+# ------------------------------------------------------------------
+# SECCIÓN 2 · MUNDO DE SOFTWARE (la sección siguiente a la de hardware).
+# Una habitación grande con SIETE computadoras y SIN estanterías ni
+# papelera: aquí no se cargan repuestos, se mueve un PENDRIVE.
+#   1. INTERNET  → navegador para bajar drivers e imágenes de sistema
+#                  (anuncios falsos y ventanas emergentes incluidas).
+#   2. DRIVERS   → instalar los drivers del pendrive por SECCIÓN de
+#                  fabricante (NVIDIA / AMD / Intel); si alguno dice
+#                  FALTA hay que volver a la PC de internet.
+#   3. SISTEMA   → instalar un sistema operativo: idioma + mini
+#                  animación final de "SISTEMA INSTALADO".
+#   4. VIRUS     → analizar el disco y arrastrar los infectados a la
+#                  cuarentena sin tocar los archivos buenos.
+#   5. PROCESOS  → administrador de tareas: terminar solo CPU > 50%.
+#   6. CAMBIAR   → desinstalar el sistema viejo y poner otro nuevo.
+#   7. ANUNCIOS  → desinstalar el bloatware sin caer en sus trampas.
+# De momento es UN solo nivel con esas siete tareas.
+# ------------------------------------------------------------------
+const SECTION_SOFTWARE := 2
+const SOFTWARE_LEVELS := [
+	{"pc_count": 7, "time": 420.0, "room": "software"},
+]
+
+# Archivos del mundo de software: se bajan en la PC de INTERNET y viajan
+# en el PENDRIVE hacia las otras PCs. "section" agrupa la página de
+# descargas y "short" es el rótulo corto para el HUD.
+const SW_ITEMS := {
+	"driver_nvidia": {"section": "drivers", "short": "NVIDIA", "vendor": "NVIDIA", "name": "GeForce Game Ready 560.70", "file": "nvidia_geforce_560.70.exe", "size": "482 MB", "duration": 2.0},
+	"driver_amd": {"section": "drivers", "short": "AMD", "vendor": "AMD", "name": "Radeon Adrenalin 24.8.1", "file": "amd_radeon_24.8.1.exe", "size": "611 MB", "duration": 2.2},
+	"driver_intel": {"section": "drivers", "short": "Intel", "vendor": "Intel", "name": "Arc Graphics 31.0.101", "file": "intel_arc_31.0.101.exe", "size": "344 MB", "duration": 1.8},
+	"so_windows": {"section": "so", "short": "Windows", "os": "Windows", "name": "Windows 11 Pro 24H2", "file": "windows11_pro.iso", "size": "4.7 GB", "duration": 2.4},
+	"so_mac": {"section": "so", "short": "macOS", "os": "macOS", "name": "macOS Sonoma 14", "file": "macos_sonoma.iso", "size": "3.9 GB", "duration": 2.2},
+	"so_linux": {"section": "so", "short": "Linux", "os": "Linux", "name": "Linux Mint 22", "file": "linux_mint_22.iso", "size": "2.8 GB", "duration": 1.9},
+}
+# Orden en que se pinta la página de descargas.
+const SW_ITEM_ORDER := ["driver_nvidia", "driver_amd", "driver_intel", "so_windows", "so_mac", "so_linux"]
+# Lo que las otras PCs de la sala exigen tener en el pendrive.
+const SW_DOWNLOAD_REQUEST := ["driver_nvidia", "driver_amd", "driver_intel", "so_windows", "so_linux"]
+# Secciones (en su orden) de la página de descargas.
+const SW_SECTIONS := [
+	{"id": "drivers", "title": "Drivers y controladores", "color": "ff2e88"},
+	{"id": "so", "title": "Imágenes de sistema operativo", "color": "19e6ff"},
+]
+
+# Cada tarea del mundo de software es un minijuego distinto.
+#   items → archivos que ese minijuego necesita en el pendrive.
+#   count → cuántas acciones completar (procesos, virus, desinstalar…).
+const SOFTWARE_PROBLEMS := [
+	{"kind": "download", "symptom": "Pendrive vacío: todavía no se le puede instalar nada a nadie", "fail": "download", "part": "Descargas", "items": SW_DOWNLOAD_REQUEST, "count": 0, "decoy": true},
+	{"kind": "drivers", "symptom": "Sin controladores: la gráfica y la red no responden", "fail": "drivers", "part": "Controladores", "items": ["driver_nvidia", "driver_amd", "driver_intel"], "count": 3, "decoy": false},
+	{"kind": "os_install", "symptom": "No arranca: esta PC se quedó sin sistema operativo", "fail": "os_install", "part": "Sistema Operativo", "items": ["so_windows", "so_mac", "so_linux"], "count": 1, "decoy": false},
+	{"kind": "virus", "symptom": "Infectada: archivos troyanos y cifrados por todas partes", "fail": "virus", "part": "Virus", "items": [], "count": 4, "decoy": true},
+	{"kind": "processes", "symptom": "Va al 100% de CPU: procesos raros en segundo plano", "fail": "processes", "part": "Procesos del Sistema", "items": [], "count": 3, "decoy": true},
+	{"kind": "os_swap", "symptom": "Trae un sistema viejo: hay que quitarlo y poner otro", "fail": "os_swap", "part": "Cambiar de Sistema", "items": ["so_windows", "so_mac", "so_linux"], "count": 1, "decoy": false},
+	{"kind": "ads", "symptom": "Lleno de publicidad, barras y programas de más", "fail": "ads", "part": "Anuncios", "items": [], "count": 3, "decoy": true},
+]
+# Los tutoriales propios de este mundo: uno por minijuego.
+const SOFTWARE_TUTORIALS := ["download", "drivers", "os_install", "virus", "processes", "os_swap", "ads"]
+# Tareas más suaves para practicar cada minijuego sin presión:
+# menos acciones, sin anuncios y con el pendrive YA cargado con lo que
+# haga falta (así ninguna práctica se queda bloqueada a medias).
+const SOFTWARE_TUTORIAL_TASKS := {
+	"download": {"items": ["driver_nvidia"], "count": 1, "decoy": false, "prefill": []},
+	"drivers": {"items": ["driver_nvidia", "driver_amd"], "count": 2, "decoy": false, "prefill": ["driver_nvidia", "driver_amd"]},
+	"os_install": {"items": ["so_windows", "so_mac", "so_linux"], "count": 1, "decoy": false, "prefill": ["so_windows", "so_linux"]},
+	"virus": {"items": [], "count": 2, "decoy": false, "prefill": []},
+	"processes": {"items": [], "count": 2, "decoy": false, "prefill": []},
+	"os_swap": {"items": ["so_windows", "so_mac", "so_linux"], "count": 1, "decoy": false, "prefill": ["so_linux"]},
+	"ads": {"items": [], "count": 2, "decoy": false, "prefill": []},
+}
+const SOFTWARE_TUTORIALS_MENU_TEXT := \
+	"Siete prácticas del mundo de software, cada una en su habitación y sin cronómetro, sin puntaje y sin penalizaciones.\n\n" + \
+	"DESCARGAS: se abre un navegador con una sola descarga pendiente. Pulsa el botón correcto, aguanta la barra de progreso (a la mitad puede cortarse y toca pulsar REANUDAR) y cierra las ventanas emergentes con su botón CERRAR. En la práctica no hay anuncios falsos.\n\n" + \
+	"CONTROLADORES: la PC trae tres secciones (NVIDIA, AMD e Intel) y hay que instalar cada driver que esté en el pendrive. En el nivel, una sección que dice FALTA significa que ese driver aún no se ha descargado en la PC de INTERNET.\n\n" + \
+	"SISTEMA OPERATIVO: se instala un sistema desde el pendrive: se elige el sistema, se elige el idioma y se espera la instalación hasta el cartel verde final.\n\n" + \
+	"VIRUS: primero ANALIZA el disco y después arrastra cada archivo infectado hasta la CUARENTENA, sin tocar los buenos.\n\n" + \
+	"PROCESOS: el administrador de tareas con la PC infestada. La regla es una sola: termina SOLO los procesos con más del 50% de CPU. Si matas uno del sistema pierdes puntos, así que mira la columna de CPU antes de pulsar.\n\n" + \
+	"CAMBIAR DE SISTEMA: se confirma el borrado del sistema viejo y se instala el nuevo desde el pendrive.\n\n" + \
+	"ANUNCIOS: hay que desinstalar los programas de publicidad y dejar los útiles. Cuidado: el aviso de despedida tiene un botón grande que NO es el que desinstala."
 
 # ------------------------------------------------------------------
 # Tipos de daño: al EXAMINAR se ven con un brillo distinto.
@@ -295,7 +414,10 @@ const SINGLE_PROBLEMS := [
 
 var state: State = State.MENU
 var current_level := 1
-var unlocked_levels := 1
+# Sección del menú en juego: 1 = reparación (hardware), 2 = software.
+var current_section := 1
+# Las secciones 1 y 2 están habilitadas (la 3 de servidores sigue cerrada).
+var unlocked_levels := 2
 var pc_count := 5
 var task_count := 5
 var repaired: Array[int] = []
@@ -317,6 +439,10 @@ var _task_counter := 1000
 
 var hud: Node = null
 
+# Contenido del PENDRIVE en el mundo de software: lo baja la PC de
+# INTERNET y las demás PCs comprueban si les falta algo.
+var pendrive: Array[String] = []
+
 var tutorial_active := false:
 	set(value):
 		tutorial_active = value
@@ -331,6 +457,27 @@ func _ready() -> void:
 	_load_settings()
 	_apply_volume()
 
+# ------------------------------------------------------------------
+# PENDRIVE: la mochila del mundo de software.
+# ------------------------------------------------------------------
+func pendrive_has(id: String) -> bool:
+	return id in pendrive
+
+func pendrive_add(id: String) -> bool:
+	if id in pendrive:
+		return false
+	pendrive.append(id)
+	return true
+
+# Rótulo corto del pendrive para el HUD ("NVIDIA, Windows, Linux").
+func pendrive_names() -> String:
+	if pendrive.is_empty():
+		return "vacío"
+	var out: Array = []
+	for id in pendrive:
+		out.append(str(SW_ITEMS.get(id, {}).get("short", id)))
+	return ", ".join(out)
+
 func _process(delta: float) -> void:
 	if state != State.PLAYING or tutorial_mode:
 		return
@@ -342,12 +489,24 @@ func _process(delta: float) -> void:
 func examine_limit() -> int:
 	return [4, 3, 2][clampi(current_level - 1, 0, 2)]
 
+# Niveles de cada sección: la 1 tiene sus 6 niveles de hardware y la 2
+# (software) de momento solo uno, con siete tareas dentro.
+func levels_for(section: int) -> Array:
+	return SOFTWARE_LEVELS if section == SECTION_SOFTWARE else LEVELS
+
+func _levels() -> Array:
+	return levels_for(current_section)
+
 func _level(idx := -1) -> Dictionary:
+	var arr: Array = _levels()
 	var i := current_level if idx < 0 else idx
-	return LEVELS[clampi(i - 1, 0, LEVELS.size() - 1)]
+	return arr[clampi(i - 1, 0, arr.size() - 1)]
 
 # Piezas que existen en este nivel: definen estanterías, slots y fallas.
+# El mundo de software no lleva repuestos: no hay ni estanterías ni papelera.
 func level_parts() -> Array:
+	if uses_software_room():
+		return []
 	return _level().get("parts", ALL_PARTS)
 
 # Niveles 1-4: sala pequeña con todo cerca; 5-6: la sala mediana
@@ -358,9 +517,14 @@ func uses_small_room() -> bool:
 func uses_medium_room() -> bool:
 	return _level().get("room", "big") == "medium"
 
-# En los niveles con sala cerrada (pequeña o mediana) no se ve el escenario.
+# Mundo de software: la sala con las SIETE PCs (internet, drivers,
+# sistema, virus, procesos, cambiar sistema y anuncios).
+func uses_software_room() -> bool:
+	return _level().get("room", "") == "software"
+
+# En los niveles con sala cerrada (pequeña, mediana o de software) no se ve el escenario.
 func uses_closed_room() -> bool:
-	return uses_small_room() or uses_medium_room()
+	return uses_small_room() or uses_medium_room() or uses_software_room()
 
 func level_uses_volt() -> bool:
 	if tutorial_mode and tutorial_mechanic in ["volt", "solder"]:
@@ -382,9 +546,12 @@ func uses_tech(part_type: String) -> bool:
 func tutorial_station_part() -> String:
 	return MECHANIC_PART.get(tutorial_part, tutorial_part)
 
-# La papelera se usa en los niveles y en el tutorial de papelera
-# (en los demás tutoriales no hay piezas dañadas).
+# La papelera se usa en los niveles de hardware y en el tutorial de
+# papelera (en los demás tutoriales no hay piezas dañadas). En el mundo
+# de software no hay nada que botar.
 func level_has_trash() -> bool:
+	if uses_software_room():
+		return false
 	return (not tutorial_mode) or tutorial_mechanic == "trash"
 
 func _problem_ok(p: Dictionary) -> bool:
@@ -464,12 +631,25 @@ const MECHANIC_TUTORIAL_TEXT := {
 	"trash": "Entrarás con la mochila ocupada: examina la PC, saca la pieza dañada (queda marcada como DAÑADA en el inventario) y llévala a la papelera para liberar espacio antes de instalar el repuesto bueno.",
 }
 
+# Texto de los tutoriales del mundo de software (uno por minijuego).
+const SOFTWARE_TUTORIAL_TEXT := {
+	"download": "Entrarás a una habitación sin cronómetro con la PC de internet. Se abre el NAVEGADOR con el centro de descargas y una sola descarga pendiente: pulsa el botón correcto, espera la barra de progreso (a la mitad puede cortarse la conexión y tendrás que pulsar REANUDAR) y cierra las ventanas emergentes con su botón CERRAR antes de que se acumulen. En esta práctica no hay anuncios falsos y el archivo que bajes se guarda solo en el pendrive.",
+	"drivers": "Entrarás a una habitación sin cronómetro con una PC que no reconoce su hardware. Se abre la ventana de CONTROLADORES con tres secciones de fabricante (NVIDIA, AMD e Intel) y el pendrive ya cargado con los dos drivers de la práctica. Pulsa INSTALAR en cada sección y verás cómo cada una pasa a INSTALADO. En el nivel real, una sección que dice FALTA significa que ese driver todavía no está en el pendrive y hay que subirse a la PC de INTERNET a bajarlo.",
+	"os_install": "Entrarás a una habitación sin cronómetro con una PC que no tiene sistema operativo. Se abre el instalador en tres pasos numerados: eliges el sistema que ya esté en el pendrive, eliges el idioma y el teclado, y pulsas INSTALAR. Verás la mini-animación de la instalación y, al terminar, el cartel verde de SISTEMA OPERATIVO INSTALADO.",
+	"virus": "Entrarás a una habitación sin cronómetro con una PC infectada. Primero pulsa ANALIZAR para que el antivirus revise los archivos y los marque; después arrastra cada archivo infectado hasta la CUARENTENA. En esta práctica son dos virus y no hay archivos buenos en medio, pero en el nivel los archivos limpios están ahí y arrastrarlos por error resta puntos.",
+	"processes": "Entrarás a una habitación sin cronómetro con una PC infestada. Se abre el ADMINISTRADOR DE TAREAS con la lista de procesos y su uso de CPU. La regla es una sola: termina SOLO los procesos que consumen más del 50% de CPU; los del sistema (baja CPU) déjalos correr. Si terminas uno del sistema pierdes puntos y la estabilidad de la PC baja. En esta práctica son dos procesos maliciosos y no hay procesos con nombre engañoso.",
+	"os_swap": "Entrarás a una habitación sin cronómetro con una PC que trae un sistema viejo. Primero marca la casilla de confirmación y pulsa DESINSTALAR para vaciar la partición; después, con el disco vacío, elige el sistema nuevo del pendrive, el idioma y pulsa INSTALAR hasta ver el cartel verde final.",
+	"ads": "Entrarás a una habitación sin cronómetro con una PC llena de programas de más. Hay que desinstalar solo los que estorban (barras de ofertas, buscadores y reproductores) y dejar los útiles. Fíjate bien en el aviso de despedida: el botón grande y verde es la trampa, el que desinstala de verdad es el pequeño.",
+}
+
 # Ficha de la pieza en párrafos completos (para el menú de tutoriales).
 func part_long_text(part_type: String) -> String:
 	var info: Dictionary = PART_INFO.get(part_type, {})
 	var title: String = PART_TITLES.get(part_type, part_type)
 	var how: String
-	if part_type in MECHANIC_TUTORIALS:
+	if part_type in SOFTWARE_TUTORIALS:
+		how = SOFTWARE_TUTORIAL_TEXT.get(part_type, "")
+	elif part_type in MECHANIC_TUTORIALS:
 		how = MECHANIC_TUTORIAL_TEXT.get(part_type, "")
 	else:
 		how = "Entrarás a una habitación sin cronómetro con una sola computadora que tiene exactamente esta pieza dañada. Toma el repuesto de la caja, examina la PC y arrástralo al slot dañado. Es el tutorial de %s y puedes repetirlo todas las veces que quieras." % title
@@ -479,12 +659,47 @@ func part_long_text(part_type: String) -> String:
 
 # Tiempo total del nivel en curso (para el reloj del HUD y sus avisos).
 func level_time_total() -> float:
-	var lvl: Dictionary = LEVELS[clampi(current_level - 1, 0, LEVELS.size() - 1)]
-	return float(lvl.get("time", 120.0))
+	return float(_level().get("time", 120.0))
+
+# Ficha del nivel del mundo de software: 7 PCs y el pendrive.
+# Los pasos van SIEMPRE numerados 1, 2, 3… con la explicación en la
+# línea de debajo (nunca todo seguido en la misma línea).
+func software_level_info_text() -> String:
+	return (
+		"[color=#19e6ff][b]QUÉ HAY EN ESTE NIVEL[/b][/color]\n" +
+		"Una habitación con %d computadoras y un cronómetro de %d segundos. No hay estanterías ni papelera: no se cargan repuestos, se mueve el PENDRIVE que baja los archivos. Cada tarea resuelta suma %d puntos y devuelve %d segundos.\n\n" +
+		"[color=#ff6b8a][b]CÓMO JUGAR[/b][/color]\n" +
+		"[color=#19e6ff][b]1[/b][/color]\n" +
+		"   E sobre la PC [color=#19e6ff][b]INTERNET[/b][/color]: se abre el navegador. Baja los %d archivos que piden las otras PCs. Distingue los botones reales de los anuncios (los anuncios instalan malware y restan puntos), cierra las ventanas emergentes con su botón CERRAR y, si una descarga se corta, pulsa REANUDAR. Todo baja al pendrive.\n" +
+		"[color=#19e6ff][b]2[/b][/color]\n" +
+		"   E sobre la PC [color=#ff2e88][b]CONTROLADORES[/b][/color]: hay tres secciones (NVIDIA, AMD e Intel). Instala los que digan EN PENDRIVE; los que digan FALTA hay que volver a bajarlos en la PC de internet.\n" +
+		"[color=#19e6ff][b]3[/b][/color]\n" +
+		"   E sobre la PC [color=#19e6ff][b]SISTEMA OPERATIVO[/b][/color]: elige el sistema del pendrive, el idioma y pulsa INSTALAR hasta ver el cartel verde.\n" +
+		"[color=#19e6ff][b]4[/b][/color]\n" +
+		"   E sobre la PC [color=#ff2e88][b]VIRUS[/b][/color]: pulsa ANALIZAR y arrastra los archivos infectados a la CUARENTENA sin tocar los buenos.\n" +
+		"[color=#19e6ff][b]5[/b][/color]\n" +
+		"   E sobre la PC [color=#19e6ff][b]PROCESOS[/b][/color]: termina SOLO los procesos con más del 50%% de CPU; los del sistema se quedan corriendo aunque su nombre dé desconfianza.\n" +
+		"[color=#19e6ff][b]6[/b][/color]\n" +
+		"   E sobre la PC [color=#ff2e88][b]CAMBIAR DE SISTEMA[/b][/color]: confirma el borrado del sistema viejo e instala el nuevo desde el pendrive.\n" +
+		"[color=#19e6ff][b]7[/b][/color]\n" +
+		"   E sobre la PC [color=#19e6ff][b]ANUNCIOS[/b][/color]: desinstala los programas que estorban y deja los útiles. En el aviso de despedida el botón grande es la trampa.\n\n" +
+		"[color=#3ce08a][b]Objetivo[/b][/color]: resolver las %d tareas antes de que el reloj llegue a cero.\n\n" +
+		"[color=#19e6ff][b]CONTROLES[/b][/color]\n" +
+		"WASD para moverte, el mouse para mirar, E para interactuar y ESC para pausar o cerrar la ventana. Todo este mundo se juega con el ratón."
+	) % [
+		int(SOFTWARE_LEVELS[0].pc_count),
+		int(SOFTWARE_LEVELS[0].time),
+		POINTS_PER_TASK,
+		int(TIME_BONUS),
+		int(SW_DOWNLOAD_REQUEST.size()),
+		SOFTWARE_PROBLEMS.size(),
+	]
 
 # Ficha corta de cada nivel en párrafos completos: qué hay, cómo se
 # juega y los controles. Se lee al pasar el mouse sobre el botón.
-func level_info_text(level_idx: int) -> String:
+func level_info_text(level_idx: int, section := 1) -> String:
+	if section == SECTION_SOFTWARE:
+		return software_level_info_text()
 	var lvl: Dictionary = LEVELS[clampi(level_idx - 1, 0, LEVELS.size() - 1)]
 	var names: Array = []
 	for t: String in lvl.get("parts", ALL_PARTS):
@@ -547,18 +762,25 @@ func _finish_level() -> void:
 		return
 	state = State.DONE
 	_apply_mouse_mode()
-	# Las secciones 2 (software) y 3 (servidores) se quedan bloqueadas por ahora.
+	# El mundo de software se juega al mismo ritmo que el de hardware:
+	# al agotarse el reloj se cierra la partida con el resumen.
 	game_finished.emit()
 
-func start_level(level_idx: int) -> void:
+func start_level(level_idx: int, section := 1) -> void:
 	tutorial_mode = false
 	tutorial_mechanic = ""
+	current_section = section
 	current_level = level_idx
-	var lvl: Dictionary = LEVELS[level_idx - 1]
+	var lvl: Dictionary = levels_for(section)[level_idx - 1]
 	pc_count = lvl.pc_count
 	task_count = pc_count
 	time_left = lvl.time
-	_build_tasks()
+	if section == SECTION_SOFTWARE:
+		_build_software_tasks()
+		# El pendrive arranca VACÍO: es la PC de internet la que lo llena.
+		pendrive.clear()
+	else:
+		_build_tasks()
 	repaired.clear()
 	score = 0
 	errors = 0
@@ -570,20 +792,31 @@ func start_level(level_idx: int) -> void:
 	game_started.emit()
 
 func start_game() -> void:
-	start_level(current_level)
+	start_level(current_level, current_section)
 
 # Arranca un tutorial: una habitación pequeña con UNA sola PC que tiene
 # exactamente la pieza indicada, sin cronómetro y sin penalizaciones.
-# También acepta las mecánicas del taller: "volt", "solder" y "trash".
+# También acepta las mecánicas del taller ("volt", "solder", "trash")
+# y las siete tareas del mundo de software (download, drivers, …).
 func start_tutorial(part_type: String) -> void:
 	tutorial_mode = true
 	tutorial_part = part_type
+	current_section = SECTION_SOFTWARE if part_type in SOFTWARE_TUTORIALS else 1
 	tutorial_mechanic = part_type if part_type in MECHANIC_TUTORIALS else ""
 	current_level = 1
 	pc_count = 1
 	task_count = 1
-	time_left = LEVELS[0].time
-	current_tasks = [_tutorial_task(tutorial_station_part())]
+	if part_type in SOFTWARE_TUTORIALS:
+		time_left = SOFTWARE_LEVELS[0].time
+		current_tasks = [_software_tutorial_task(part_type)]
+		# El pendrive arranca cargado con lo que esa práctica necesita
+		# para que ninguna práctica quede bloqueada a medias.
+		pendrive.clear()
+		for id: String in SOFTWARE_TUTORIAL_TASKS.get(part_type, {}).get("prefill", []):
+			pendrive_add(id)
+	else:
+		time_left = LEVELS[0].time
+		current_tasks = [_tutorial_task(tutorial_station_part())]
 	repaired.clear()
 	score = 0
 	errors = 0
@@ -593,6 +826,50 @@ func start_tutorial(part_type: String) -> void:
 	state = State.PLAYING
 	_apply_mouse_mode()
 	game_started.emit()
+
+# Las tareas del nivel del mundo de software: una por computadora,
+# en el MISMO orden que se colocan los escritorios en la sala.
+func _build_software_tasks() -> void:
+	current_tasks.clear()
+	for i in SOFTWARE_PROBLEMS.size():
+		current_tasks.append(_software_task(SOFTWARE_PROBLEMS[i], i + 1))
+
+func _software_task(problem: Dictionary, id: int) -> Dictionary:
+	return {
+		"id": id,
+		"kind": problem.kind,
+		"symptom": problem.symptom,
+		"fail": problem.fail,
+		"fail2": "",
+		"part": problem.part,
+		"part2": "",
+		"variant": "",
+		"variant2": "",
+		"fault": "",
+		"fix": "",
+		"fault2": "",
+		"fix2": "",
+		# Archivos que ese minijuego espera encontrar en el pendrive.
+		"items": Array(problem.get("items", [])),
+		# Cuántas acciones completar (0 cuando se resuelve con archivos).
+		"count": int(problem.get("count", 0)),
+		"decoy": bool(problem.decoy),
+	}
+
+# La tarea del tutorial: suavizada (menos acciones, sin trampas).
+func _software_tutorial_task(kind: String) -> Dictionary:
+	_task_counter += 1
+	var problem: Dictionary = SOFTWARE_PROBLEMS[0]
+	for p in SOFTWARE_PROBLEMS:
+		if p.kind == kind:
+			problem = p
+			break
+	var soft: Dictionary = SOFTWARE_TUTORIAL_TASKS.get(kind, {})
+	var task := _software_task(problem, _task_counter)
+	task.items = Array(soft.get("items", task.items))
+	task.count = int(soft.get("count", task.count))
+	task.decoy = bool(soft.get("decoy", task.decoy))
+	return task
 
 # Síntomas fijos de los tutoriales de mecánica.
 const MECHANIC_SYMPTOM := {
@@ -679,7 +956,7 @@ func mark_repaired(pc_id: int) -> void:
 		return
 	repaired.append(pc_id)
 	score += POINTS_PER_TASK
-	time_left = clampf(time_left + TIME_BONUS, 0.0, LEVELS[current_level - 1].time)
+	time_left = clampf(time_left + TIME_BONUS, 0.0, level_time_total())
 	task_completed.emit(pc_id)
 	if all_done():
 		_finish_level()
@@ -696,7 +973,11 @@ func remove_carried(data: Dictionary) -> void:
 		carried_parts.remove_at(idx)
 
 func random_variant(part_type: String) -> Dictionary:
-	var variants: Array = PART_VARIANTS[part_type]
+	var variants: Array = PART_VARIANTS.get(part_type, [])
+	if variants.is_empty():
+		# Tipos sin variantes propias (tutoriales de software o
+		# mecánicas): se devuelve una ficha genérica en vez de romper.
+		return {"name": str(PART_TITLES.get(part_type, part_type)), "type": part_type}
 	return variants[randi() % variants.size()]
 
 func penalize() -> void:
@@ -707,6 +988,12 @@ func penalize() -> void:
 func new_task() -> Dictionary:
 	var singles: Array = _level_singles()
 	var doubles: Array = _level_doubles()
+	# En el mundo de software no hay problemas de hardware: si alguien
+	# pide una tarea nueva, se recurre a la lista general.
+	if singles.is_empty():
+		singles = SINGLE_PROBLEMS
+	if doubles.is_empty():
+		doubles = DOUBLE_PROBLEMS
 	var p: Dictionary
 	if randf() < 0.3 and doubles.size() > 0:
 		p = doubles[randi() % doubles.size()]

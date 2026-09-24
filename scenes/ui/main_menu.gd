@@ -38,6 +38,12 @@ extends Control
 @onready var section_tutorials_button: Button = %SectionTutorialsButton
 @onready var tutorials_pick_screen: Control = %TutorialsPickScreen
 @onready var tutorials_pick_back_button: Button = %TutorialsPickBackButton
+# Rótulos del menú de la sección y de la lista de tutoriales (cambian
+# según el mundo al que se entra: hardware o software).
+@onready var section_title: Label = $TutorialOptionsScreen/VBox/SectionTitle
+@onready var pick_title: Label = $TutorialsPickScreen/VBox/PickTitle
+@onready var pick_hint: Label = $TutorialsPickScreen/VBox/SectionHint
+@onready var mechanics_header: Label = $TutorialsPickScreen/VBox/MechanicsHeader
 
 @onready var tutorial_text: RichTextLabel = %TutorialText
 @onready var tutorial_title: Label = %TutorialTitle
@@ -64,6 +70,13 @@ extends Control
 var _screens: Array[Control] = []
 var _tut_page := 0
 var _tut_part_buttons: Array = []
+# Sección abierta en el menú de niveles: 1 = reparación, 2 = software.
+var _current_section := 1
+# Los tutoriales del mundo de software (uno por minijuego, botones
+# creados por código para que se monten en el menú orbital).
+var _tut_software_buttons := {}
+var _tut_browser_button: Button
+var _tut_process_button: Button
 
 # Fichas de la columna derecha (aparecen al pasar el mouse sobre un botón).
 var _panel_level: PanelContainer
@@ -75,6 +88,14 @@ var _info_bodies := {}
 var _info_scrolls := {}
 
 func _ready() -> void:
+	# Se crean ANTES de aplicar el estilo para que viajen en el mismo
+	# tema y en el mismo menú orbital que el resto de los tutoriales.
+	_tut_software_buttons.clear()
+	for part: String in Game.SOFTWARE_TUTORIALS:
+		_tut_software_buttons[part] = _new_software_tut_button(part)
+	# Alias que usan otros puntos del menú (y los tests).
+	_tut_browser_button = _tut_software_buttons.get("download")
+	_tut_process_button = _tut_software_buttons.get("processes")
 	# Tema ciberpunk (neón + retícula) y animaciones para todas las pantallas.
 	UiStyle.apply(self)
 	# Título del manual con neón (halo cian + contorno magenta).
@@ -117,6 +138,9 @@ func _ready() -> void:
 		[tut_solder_button, "solder"],
 		[tut_trash_button, "trash"],
 	]
+	# Mundo de software: un botón por minijuego (descargas, drivers…).
+	for part: String in Game.SOFTWARE_TUTORIALS:
+		_tut_part_buttons.append([_tut_software_buttons[part], part])
 	for entry: Array in _tut_part_buttons:
 		var button: Button = entry[0]
 		var part: String = entry[1]
@@ -157,12 +181,15 @@ func _build_orbit_menus() -> void:
 		section.append(b)
 	section.append(tutorial_options_back_button)
 	_orbit(tutorial_options_screen, section)
-	_orbit(tutorials_pick_screen, [
+	var pick_buttons: Array = [
 		tut_ram_button, tut_hdd_button, tut_psu_button, tut_gpu_button,
 		tut_mb_button, tut_cpu_button, tut_fan_button,
 		tut_volt_button, tut_solder_button, tut_trash_button,
-		tutorials_pick_back_button,
-	])
+	]
+	for part: String in Game.SOFTWARE_TUTORIALS:
+		pick_buttons.append(_tut_software_buttons[part])
+	pick_buttons.append(tutorials_pick_back_button)
+	_orbit(tutorials_pick_screen, pick_buttons)
 	_orbit(controls_screen, [controls_back_button])
 	_orbit(pause_screen, [resume_button, restart_button, pause_menu_button])
 	_orbit(finish_screen, [next_level_button, replay_button, finish_menu_button])
@@ -230,10 +257,11 @@ func _build_info_layout() -> void:
 	_wire_info(level_buttons[1], _panel_level, Game.SECTION_NAMES[1], Game.SECTION_INFO[1])
 	_wire_info(level_buttons[2], _panel_level, Game.SECTION_NAMES[2], Game.SECTION_INFO[2])
 
-	_wire_info(section_tutorials_button, _panel_section, "TUTORIALES", Game.TUTORIALS_MENU_TEXT)
-	# Cada nivel tiene su ficha (qué hay, cómo jugar y controles).
+	# La ficha de TUTORIALES y la de cada nivel dependen del mundo abierto
+	# (la sección de software tiene UN nivel y otro tipo de tarea).
+	section_tutorials_button.mouse_entered.connect(_show_tutorials_info)
 	for i in section_level_buttons.size():
-		_wire_info(section_level_buttons[i], _panel_section, "NIVEL %d" % (i + 1), Game.level_info_text(i + 1))
+		section_level_buttons[i].mouse_entered.connect(_show_section_level_info.bind(i + 1))
 
 func _split_columns(screen: Control) -> PanelContainer:
 	var card: Control = screen.get_child(0)
@@ -356,18 +384,66 @@ func _open_levels() -> void:
 		level_buttons[i].text = section_name if unlocked else "%s — BLOQUEADO" % section_name
 	_show_screen(level_screen)
 
-# Solo la sección 1 está habilitada: las otras dos quedan bloqueadas.
+# Solo las secciones 1 (reparación) y 2 (software) están habilitadas.
 func _select_section(idx: int) -> void:
 	if idx > Game.unlocked_levels:
 		return
+	_current_section = idx
+	_refresh_section_menu()
 	_show_screen(tutorial_options_screen)
 
+# El menú de la sección se arma según el mundo: su título y cuántos
+# niveles tiene (la sección de software trae UN solo nivel).
+func _refresh_section_menu() -> void:
+	if section_title:
+		section_title.text = Game.SECTION_NAMES[_current_section - 1]
+	var total := Game.levels_for(_current_section).size()
+	for i in section_level_buttons.size():
+		section_level_buttons[i].visible = i < total
+
+# La ficha de TUTORIALES cambia según el mundo al que se entró.
+func _show_tutorials_info() -> void:
+	if _current_section == Game.SECTION_SOFTWARE:
+		_show_info(_panel_section, "TUTORIALES", Game.SOFTWARE_TUTORIALS_MENU_TEXT)
+	else:
+		_show_info(_panel_section, "TUTORIALES", Game.TUTORIALS_MENU_TEXT)
+
+# La ficha de cada nivel se arma con la sección seleccionada.
+func _show_section_level_info(level_idx: int) -> void:
+	_show_info(_panel_section, "NIVEL %d" % level_idx, Game.level_info_text(level_idx, _current_section))
+
+# Botón nuevo de tutorial del mundo de software (se crea por código).
+func _new_software_tut_button(part: String) -> Button:
+	var button := Button.new()
+	button.name = "TutSoftware%sButton" % part.capitalize()
+	button.text = "TUTORIAL: %s" % Game.PART_TITLES.get(part, part).to_upper()
+	button.custom_minimum_size = Vector2(520, 38)
+	button.add_theme_font_size_override("font_size", 17)
+	button.visible = false
+	tut_ram_button.get_parent().add_child(button)
+	return button
+
 func _play_level(idx: int) -> void:
-	Game.start_level(idx)
+	Game.start_level(idx, _current_section)
 	visible = false
 
 # TUTORIALES (arriba de JUGAR) abre la lista de piezas, una debajo de otra.
+# Cada mundo enseña lo suyo: el taller sus piezas, software sus minijuegos.
 func _open_tutorials_pick() -> void:
+	var software := _current_section == Game.SECTION_SOFTWARE
+	for entry: Array in _tut_part_buttons:
+		var part: String = entry[1]
+		(entry[0] as Button).visible = (part in Game.SOFTWARE_TUTORIALS) == software
+	if pick_title:
+		pick_title.text = "TUTORIALES · %s" % Game.SECTION_NAMES[_current_section - 1]
+	if pick_hint:
+		pick_hint.text = (
+			"Siete minijuegos del mundo de software: cada uno en su habitación, sin cronómetro."
+			if software else
+			"Piezas y mecánicas del taller: cada una en su habitación, sin cronómetro."
+		)
+	if mechanics_header:
+		mechanics_header.visible = not software
 	_show_screen(tutorials_pick_screen)
 
 func _open_section_menu() -> void:
@@ -463,21 +539,21 @@ func _restart() -> void:
 	if Game.tutorial_mode:
 		Game.start_tutorial(Game.tutorial_part)
 	else:
-		Game.start_level(Game.current_level)
+		Game.start_level(Game.current_level, Game.current_section)
 	visible = false
 
 func _replay() -> void:
 	if Game.tutorial_mode:
 		Game.start_tutorial(Game.tutorial_part)
 	else:
-		Game.start_level(Game.current_level)
+		Game.start_level(Game.current_level, Game.current_section)
 	visible = false
 
 func _next_level() -> void:
 	if Game.tutorial_mode:
 		return
-	if Game.current_level < Game.LEVELS.size():
-		Game.start_level(Game.current_level + 1)
+	if Game.current_level < Game.levels_for(Game.current_section).size():
+		Game.start_level(Game.current_level + 1, Game.current_section)
 	visible = false
 
 func _to_menu() -> void:
@@ -498,7 +574,7 @@ func _on_finished() -> void:
 		int(Game.time_left) / 60,
 		int(Game.time_left) % 60,
 	]
-	next_level_button.visible = completed and Game.current_level < Game.LEVELS.size()
+	next_level_button.visible = completed and Game.current_level < Game.levels_for(Game.current_section).size()
 	_show_screen(finish_screen)
 
 func _quit() -> void:

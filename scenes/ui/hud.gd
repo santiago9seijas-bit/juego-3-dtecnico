@@ -18,6 +18,28 @@ extends CanvasLayer
 var _msg_until := 0.0
 var _removal_cb: Callable = Callable()
 
+# Panel del mundo de software: dentro va el minijuego de la PC (se
+# construye una sola vez en _ready). El registro MINIGAMES asigna un
+# minijuego a cada tipo de PC de la sala.
+var MINIGAMES := {
+	"download": BrowserMinigame,
+	"drivers": DriversMinigame,
+	"os_install": OsInstallMinigame,
+	"virus": VirusMinigame,
+	"processes": ProcessesMinigame,
+	"os_swap": OsSwapMinigame,
+	"ads": AdsMinigame,
+}
+var software_host: Control
+var software_panel: PanelContainer
+var software_title: Label
+var software_symptom: Label
+var software_pendrive: Label
+var software_content: VBoxContainer
+var software_status: Label
+var software_close: Button
+var _soft_pc: Node = null
+
 # UI propia del modo tutorial (se construye una sola vez en _ready).
 var tut_header: Label
 var tut_exit_button: Button
@@ -26,6 +48,7 @@ var tut_intro_title: Label
 var tut_intro_body: RichTextLabel
 var tut_intro_start: Button
 var tut_intro_back: Button
+var tut_intro_hint: Label
 var tut_complete: CenterContainer
 var tut_repeat_button: Button
 var tut_complete_exit: Button
@@ -53,6 +76,7 @@ func _ready() -> void:
 	removal_panel.done.connect(_on_removal_done)
 	removal_panel.cancel.connect(_on_removal_cancel)
 	_build_tutorial_ui()
+	_build_software_ui()
 	_style_ui()
 
 # Mismo look del menú principal: paneles oscuros con neón y botones animados.
@@ -96,6 +120,11 @@ func _process(delta: float) -> void:
 	var playing := Game.state == Game.State.PLAYING
 	gameplay_root.visible = playing
 	_update_tutorial_ui()
+	# Mientras la ventana está abierta el pendrive se mueve solo: cada
+	# descarga lo carga y cada instalador lo consulta, así que el cartel
+	# tiene que decir SIEMPRE qué lleva y qué le falta a esa PC.
+	if software_panel and software_panel.visible:
+		_refresh_software_pendrive()
 	if not playing:
 		return
 	if not Game.tutorial_mode:
@@ -279,8 +308,167 @@ func close_top_menu() -> void:
 		_on_removal_cancel()
 	elif picker.visible:
 		close_picker()
+	elif software_panel and software_panel.visible:
+		close_software()
 	elif minigame.visible:
 		close_minigame()
+
+# ------------------------------------------------------------------
+# MUNDO DE SOFTWARE: ventana con el navegador o el administrador de
+# tareas. Se construye una sola vez y recibe un minijuego por tarea.
+# ------------------------------------------------------------------
+func _build_software_ui() -> void:
+	software_host = Control.new()
+	software_host.name = "SoftwareHost"
+	add_child(software_host)
+	software_host.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
+	# IMPORTANTE: al ser un Control a pantalla completa dentro del HUD,
+	# tiene que dejar pasar el ratón (como hace "Gameplay") o tapa los
+	# botones del menú principal que quedan debajo.
+	software_host.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	software_host.visible = false
+
+	# Centrado garantizado. Igual que el host, no puede comerse los clics:
+	# el que los recoge es el panel (STOP por defecto) mientras está abierto.
+	var center := CenterContainer.new()
+	center.name = "SoftwareCenter"
+	software_host.add_child(center)
+	center.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
+	center.mouse_filter = Control.MOUSE_FILTER_IGNORE
+
+	software_panel = PanelContainer.new()
+	software_panel.name = "SoftwarePanel"
+	software_panel.visible = false
+	software_panel.custom_minimum_size = Vector2(940, 580)
+	center.add_child(software_panel)
+
+	var margin := MarginContainer.new()
+	margin.name = "Margin"
+	margin.add_theme_constant_override("margin_left", 22)
+	margin.add_theme_constant_override("margin_top", 16)
+	margin.add_theme_constant_override("margin_right", 22)
+	margin.add_theme_constant_override("margin_bottom", 16)
+	software_panel.add_child(margin)
+
+	var box := VBoxContainer.new()
+	box.name = "VBox"
+	box.add_theme_constant_override("separation", 12)
+	margin.add_child(box)
+
+	var head := HBoxContainer.new()
+	head.add_theme_constant_override("separation", 12)
+	box.add_child(head)
+
+	software_title = Label.new()
+	software_title.name = "SoftwareTitle"
+	software_title.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	software_title.add_theme_font_size_override("font_size", 22)
+	UiStyle.accent(software_title)
+	head.add_child(software_title)
+
+	software_close = Button.new()
+	software_close.name = "SoftwareClose"
+	software_close.text = "CERRAR (ESC)"
+	software_close.custom_minimum_size = Vector2(170, 42)
+	software_close.add_theme_font_size_override("font_size", 16)
+	software_close.pressed.connect(close_software)
+	head.add_child(software_close)
+
+	software_symptom = Label.new()
+	software_symptom.name = "SoftwareSymptom"
+	software_symptom.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
+	software_symptom.add_theme_font_size_override("font_size", 15)
+	software_symptom.add_theme_color_override("font_color", Color(1, 0.85, 0.4))
+	box.add_child(software_symptom)
+
+	# Contenido del pendrive: el jugador siempre ve qué le falta llevar.
+	software_pendrive = Label.new()
+	software_pendrive.name = "SoftwarePendrive"
+	software_pendrive.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
+	software_pendrive.add_theme_font_size_override("font_size", 14)
+	software_pendrive.add_theme_color_override("font_color", UiStyle.CYAN_SOFT)
+	box.add_child(software_pendrive)
+
+	software_content = VBoxContainer.new()
+	software_content.name = "SoftwareContent"
+	software_content.size_flags_vertical = Control.SIZE_EXPAND_FILL
+	box.add_child(software_content)
+
+	software_status = Label.new()
+	software_status.name = "SoftwareStatus"
+	software_status.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
+	software_status.add_theme_font_size_override("font_size", 15)
+	software_status.add_theme_color_override("font_color", UiStyle.TEXT_DIM)
+	box.add_child(software_status)
+
+	# Tema ciberpunk + animación del botón (el resto llega por herencia).
+	UiStyle.apply(software_panel)
+
+func open_software(pc: Node) -> void:
+	if pc == null or software_panel == null:
+		return
+	if pc.get("pc_id") != null and int(pc.pc_id) in Game.repaired:
+		return
+	_soft_pc = pc
+	var kind := str(pc.get("kind"))
+	software_title.text = "PC %d · %s" % [int(pc.pc_id), Game.PART_TITLES.get(kind, "PC")]
+	software_symptom.text = "SÍNTOMA: %s" % str(pc.get("symptom"))
+	_refresh_software_pendrive()
+	_clear_software_content()
+	var cls: GDScript = MINIGAMES.get(kind, BrowserMinigame)
+	var node := cls.new() as Control
+	software_content.add_child(node)
+	# Estado por PC: cerrar la ventana no pierde descargas ni instalaciones.
+	var soft_state: Dictionary = pc.get("state") if pc.get("state") != null else {}
+	node.setup(soft_state, pc.get("task") if "task" in pc else {})
+	node.finished.connect(_on_software_done)
+	software_status.text = "Resuelve la tarea para reparar esta PC. ESC la cierra sin perder el avance."
+	software_status.add_theme_color_override("font_color", UiStyle.TEXT_DIM)
+	software_panel.visible = true
+	software_host.visible = true
+	Game.is_minigame_open = true
+
+# Rótulo vivo del pendrive (se repinta en cada frame mientras hay ventana).
+func _refresh_software_pendrive() -> void:
+	if software_pendrive:
+		software_pendrive.text = "PENDRIVE · contiene: %s" % Game.pendrive_names()
+
+func close_software() -> void:
+	if software_panel:
+		software_panel.visible = false
+	if software_host:
+		software_host.visible = false
+	_clear_software_content()
+	_soft_pc = null
+	Game.is_minigame_open = false
+
+func _clear_software_content() -> void:
+	if software_content == null:
+		return
+	# Nunca free() aquí: el minijuego puede estar emitiendo su señal
+	# (finished) cuando se cierra la ventana. Se saca del árbol ya y se
+	# destruye al terminar el frame.
+	for child in software_content.get_children():
+		software_content.remove_child(child)
+		child.call_deferred("free")
+
+# La tarea terminada: se cierra la ventana y se anota la reparación.
+# Se aplaza un frame para que el minijuego termine de emitir su señal
+# sin que su propio nodo quede bloqueado al liberarse.
+func _on_software_done() -> void:
+	if _soft_pc == null:
+		return
+	call_deferred("_close_and_repair", _soft_pc)
+
+func _close_and_repair(pc: Node) -> void:
+	if not is_instance_valid(pc):
+		return
+	_soft_pc = null
+	close_software()
+	var id := int(pc.pc_id)
+	Game.mark_repaired(id)
+	if not Game.tutorial_mode:
+		show_message("¡PC %d reparada! +%d puntos" % [id, Game.POINTS_PER_TASK])
 
 func open_removal(part_type: String, on_done: Callable, reverse := false, mode := "") -> void:
 	_removal_cb = on_done
@@ -384,6 +572,7 @@ func _build_tutorial_intro() -> void:
 	box.add_child(tut_intro_body)
 
 	var hint := Label.new()
+	tut_intro_hint = hint
 	hint.text = "Recorre la habitación, examina la PC y lleva el repuesto al slot dañado.\nSin cronómetro: puedes practicar las veces que quieras."
 	hint.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
 	hint.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
@@ -478,6 +667,10 @@ func _show_tutorial_intro() -> void:
 	tut_complete.visible = false
 	tut_intro_title.text = "TUTORIAL: %s" % Game.PART_TITLES.get(Game.tutorial_part, "").to_upper()
 	tut_intro_body.text = Game.part_info_text(Game.tutorial_part)
+	if Game.tutorial_part in Game.SOFTWARE_TUTORIALS:
+		tut_intro_hint.text = "Recorre la habitación, pulsa E sobre la PC y resuelve el minijuego con el ratón.\nSin cronómetro y sin penalizaciones: repítelo las veces que quieras."
+	else:
+		tut_intro_hint.text = "Recorre la habitación, examina la PC y lleva el repuesto al slot dañado.\nSin cronómetro: puedes practicar las veces que quieras."
 	tut_intro.visible = true
 	UiStyle.fade_in(tut_intro)
 	tut_intro_start.grab_focus.call_deferred()
@@ -502,7 +695,8 @@ func _on_tutorial_finished() -> void:
 	Game.tutorial_active = true
 	# La pantalla de "tutorial terminado" queda sola, sin la PC encima.
 	close_minigame()
-	tut_complete_text.text = "Reparaste la %s correctamente. Practica de nuevo o vuelve al menú." % title
+	close_software()
+	tut_complete_text.text = "Completaste el tutorial de %s. Practica de nuevo o vuelve al menú." % title
 	tut_complete.visible = true
 	UiStyle.fade_in(tut_complete)
 	tut_repeat_button.grab_focus.call_deferred()

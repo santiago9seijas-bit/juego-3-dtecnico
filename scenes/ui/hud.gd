@@ -69,8 +69,14 @@ var _last_timer_outline := Color(-1.0, -1.0, -1.0)
 func _ready() -> void:
 	Game.hud = self
 	Game.game_started.connect(_on_game_started)
+	Game.game_finished.connect(close_all_menus)
+	Game.tutorial_exited.connect(close_all_menus)
+	Game.tutorial_finished.connect(close_all_menus)
 	Game.tutorial_finished.connect(_on_tutorial_finished)
 	Game.tutorial_exited.connect(_on_tutorial_exited)
+	# El marcador de PCs se refresca al instante (el último reparo ocurre
+	# justo cuando el nivel pasa a terminado y _process ya no pinta nada).
+	Game.task_completed.connect(_on_task_progress)
 	minigame.repaired.connect(_on_repair)
 	prompt_label.visible = false
 	message_label.visible = false
@@ -221,13 +227,20 @@ func show_message(text: String) -> void:
 # Inventario: avisa claramente cuándo llevas una pieza dañada (rojo
 # neón + ⚠) para que la vayas a botar a la papelera.
 func _show_carried() -> void:
-	# Mundo de software: no hay mochila ni piezas, así que no se recalcula
-	# nada y el rótulo se queda fijo en "—" (sin cadenas nuevas por frame).
+	# Mundo de software: aquí no hay mochila, así que el rótulo pasa a ser
+	# el MARCADOR de la sala (X de 7 PCs listas). En tutorial no se anota
+	# nada, así que se avisa de que es práctica libre. De paso no se
+	# recalcula inventario en cada frame.
 	if Game.uses_software_room():
-		if _last_carried_text != "Llevas: —":
-			_last_carried_text = "Llevas: —"
-			carried_label.text = "Llevas: —"
-			carried_label.add_theme_color_override("font_color", UiStyle.TEXT)
+		var sw_text := "TUTORIAL · sin cronómetro y sin penalizaciones"
+		var sw_color := UiStyle.CYAN_SOFT
+		if not Game.tutorial_mode:
+			sw_text = "PCs reparadas: %d/%d" % [Game.repaired.size(), Game.task_count]
+			sw_color = Color(0.3, 1.0, 0.5) if Game.repaired.size() >= Game.task_count else UiStyle.CYAN
+		if sw_text != _last_carried_text:
+			_last_carried_text = sw_text
+			carried_label.text = sw_text
+			carried_label.add_theme_color_override("font_color", sw_color)
 		return
 	var text := "Llevas: —"
 	var damaged := Game.damaged_count()
@@ -328,6 +341,20 @@ func close_top_menu() -> void:
 		close_software()
 	elif minigame.visible:
 		close_minigame()
+
+# Cierra TODO de un golpe. Se usa cuando la partida termina (se acabó el
+# tiempo), al salir del tutorial y al arrancar un nivel: si no, la ventana
+# de software seguiría montada sobre el resumen o sobre el menú.
+func close_all_menus() -> void:
+	if removal_panel and removal_panel.visible:
+		_on_removal_cancel()
+	if picker and picker.visible:
+		close_picker()
+	if software_panel and software_panel.visible:
+		close_software()
+	if minigame and minigame.visible:
+		close_minigame()
+	Game.is_minigame_open = false
 
 # ------------------------------------------------------------------
 # MUNDO DE SOFTWARE: ventana con el navegador o el administrador de
@@ -533,6 +560,11 @@ func _close_and_repair(pc: Node) -> void:
 		return
 	_soft_pc = null
 	close_software()
+	# Si la partida ya terminó (se acabó el tiempo con la ventana abierta),
+	# la ventana se cierra pero NO se anota nada nuevo: el resumen ya está
+	# pintado en pantalla.
+	if Game.state != Game.State.PLAYING:
+		return
 	var id := int(pc.pc_id)
 	Game.mark_repaired(id)
 	if not Game.tutorial_mode:
@@ -564,6 +596,8 @@ func _fix_picker_layout() -> void:
 	picker.set_anchors_and_offsets_preset(Control.PRESET_CENTER)
 
 func _on_game_started() -> void:
+	# Arranca un nivel nuevo: no puede heredar ninguna ventana abierta.
+	close_all_menus()
 	_last_carried_text = ""
 	_last_timer_secs = -1
 	_last_score = -1
@@ -576,6 +610,11 @@ func _on_game_started() -> void:
 	# vive ahora en el menú de la sección (ficha de la derecha).
 
 func _on_repair(_pc_id: int) -> void:
+	_show_carried()
+
+# Cada PC reparada refresca el marcador de la sala (se llama también con
+# la última, justo antes de que el nivel pase a terminado).
+func _on_task_progress(_pc_id: int) -> void:
 	_show_carried()
 
 # ------------------------------------------------------------------

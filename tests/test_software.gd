@@ -112,7 +112,9 @@ func _minijuegos() -> void:
 	_check(hud.software_pendrive.text.contains("NVIDIA"), "…nombra los archivos que faltan")
 	_check(hud.software_pendrive.text.contains("ve a la PC de INTERNET"),
 		"y dice dónde bajarlos")
-	hud.close_software()
+	hud.close_all_menus()
+	_check(not hud.software_panel.visible, "close_all_menus cierra la ventana de golpe")
+	_check(not Game.is_minigame_open, "…y devuelve el control al jugador")
 	pc_preview.free()
 
 	# ---- PC 1 · INTERNET (navegador con descargas) ------------------
@@ -165,6 +167,8 @@ func _minijuegos() -> void:
 	await get_tree().create_timer(1.2).timeout
 	_check(hud.software_panel.visible == false, "la ventana se sola al terminar")
 	_check(1 in Game.repaired, "con las descargas se repara la PC 1")
+	_check(hud.carried_label.text.contains("PCs reparadas: 1/7"),
+		"el rótulo de la mochila pasa a MARCADOR de la sala")
 	pc1.free()
 
 	# ---- PC 2 · CONTROLADORES (por sección de fabricante) -----------
@@ -349,6 +353,7 @@ func _minijuegos() -> void:
 	await get_tree().create_timer(1.2).timeout
 	_check(7 in Game.repaired, "con la PC sin anuncios se repara la PC 7")
 	_check(Game.repaired.size() == 7, "las 7 PCs del mundo de software quedan reparadas")
+	_check(hud.carried_label.text.contains("PCs reparadas: 7/7"), "…y el marcador de la sala llega a 7/7")
 	_check(Game.state == Game.State.DONE, "y el nivel se cierra")
 	pc7.free()
 

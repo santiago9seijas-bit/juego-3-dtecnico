@@ -2,10 +2,23 @@
 
 Historial de versiones publicadas en [versions/](./).
 
-| Versión | Fecha       | Linux                         | Windows                         |
-| ------- | ----------- | ----------------------------- | ------------------------------- |
-| **0.2** | 2026-09-22  | [linux-version/0.2.zip](./linux-version/0.2.zip) | [windows-version/0.2.zip](./windows-version/0.2.zip) |
-| 0.1     | 2026-08-06  | [linux-version/0.1.zip](./linux-version/0.1.zip) | [windows-version/0.1.zip](./windows-version/0.1.zip) |
+```
+versions/
+├── CHANGELOG.md              ← este archivo
+├── linux-version/            ← builds de Linux (README con instrucciones)
+│   ├── README.md
+│   ├── v.0.1.zip
+│   └── v.0.2.zip             ← última versión
+└── windows-version/          ← builds de Windows (README con instrucciones)
+    ├── README.md
+    ├── v.0.1.zip
+    └── v.0.2.zip             ← última versión
+```
+
+| Versión | Fecha       | Linux                              | Windows                              |
+| ------- | ----------- | ---------------------------------- | ------------------------------------ |
+| **0.2** | 2026-09-22  | [linux-version/v.0.2.zip](./linux-version/v.0.2.zip) | [windows-version/v.0.2.zip](./windows-version/v.0.2.zip) |
+| 0.1     | 2026-08-06  | [linux-version/v.0.1.zip](./linux-version/v.0.1.zip) | [windows-version/v.0.1.zip](./windows-version/v.0.1.zip) |
 
 ---
 

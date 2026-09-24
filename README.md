@@ -53,31 +53,31 @@ juego-3-dtecnico/
 │   └── menu_grid.gdshader   # Retícula técnica de fondo de los menús
 ├── versions/
 │   ├── CHANGELOG.md         # Historial de versiones (0.1, 0.2)
-│   ├── linux-version/       # Builds de Linux por versión
-│   └── windows-version/     # Builds de Windows por versión
+│   ├── linux-version/       # README + builds de Linux por versión (v.0.1, v.0.2)
+│   └── windows-version/     # README + builds de Windows por versión (v.0.1, v.0.2)
 └── tests/                   # Pruebas automatizadas de escenas y lógica
 ```
 
 ## Versiones
 
 Historial completo y notas de cada versión en **[versions/CHANGELOG.md](versions/CHANGELOG.md)**.
+Instrucciones por plataforma: **[Linux](versions/linux-version/README.md)** · **[Windows](versions/windows-version/README.md)**.
 
 | Versión | Plataforma | Archivo | Fecha |
 |---------|------------|---------|-------|
-| **0.2** | Linux x86_64 | [versions/linux-version/0.2.zip](versions/linux-version/0.2.zip) | 2026-09-22 |
-| **0.2** | Windows x86_64 | [versions/windows-version/0.2.zip](versions/windows-version/0.2.zip) | 2026-09-22 |
-| 0.1 | Linux x86_64 | [versions/linux-version/0.1.zip](versions/linux-version/0.1.zip) | 2026-08-06 |
-| 0.1 | Windows x86_64 | [versions/windows-version/0.1.zip](versions/windows-version/0.1.zip) | 2026-08-06 |
+| **v.0.2** | Linux x86_64 | [versions/linux-version/v.0.2.zip](versions/linux-version/v.0.2.zip) | 2026-09-22 |
+| **v.0.2** | Windows x86_64 | [versions/windows-version/v.0.2.zip](versions/windows-version/v.0.2.zip) | 2026-09-22 |
+| v.0.1 | Linux x86_64 | [versions/linux-version/v.0.1.zip](versions/linux-version/v.0.1.zip) | 2026-08-06 |
+| v.0.1 | Windows x86_64 | [versions/windows-version/v.0.1.zip](versions/windows-version/v.0.1.zip) | 2026-08-06 |
 
 Cómo jugar una build descargada:
 
 1. Descarga el ZIP de tu plataforma y descomprímelo.
-2. **Linux:** dale permiso de ejecución y ábrelo:
+2. **Linux:**
    ```bash
-   unzip 0.2.zip && chmod +x juego_3d_tecnico.x86_64 && ./juego_3d_tecnico.x86_64
+   unzip v.0.2.zip && chmod +x juego_3d_tecnico.x86_64 && ./juego_3d_tecnico.x86_64
    ```
-   (o doble clic en el archivo si tu escritorio lo permite)
-3. **Windows:** descomprime y haz doble clic en `juego_3d_tecnico.exe`.
+3. **Windows:** doble clic en `juego_3d_tecnico.exe`.
 
 Ambos ejecutables traen el `.pck` embebido: no necesitan archivos extra.
 

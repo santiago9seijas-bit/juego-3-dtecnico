@@ -28,6 +28,8 @@ const PATTERN := [true, false, false, true, false, true, false]
 
 # Progreso de esta PC (ya terminados, estabilidad): se guarda en `state`
 # para que cerrar la ventana no pierda lo hecho.
+# PC en la que está abierto este minijuego (sirve para el hueco USB).
+var pc_id := 0
 var state: Dictionary = {}
 var required := 3
 var show_decoy := true
@@ -49,7 +51,8 @@ var _status: Label
 # ------------------------------------------------------------------
 # Construcción
 # ------------------------------------------------------------------
-func setup(new_state: Dictionary, task: Dictionary) -> void:
+func setup(new_state: Dictionary, task: Dictionary, new_pc_id := 0) -> void:
+	pc_id = new_pc_id
 	state = new_state if new_state != null else {}
 	required = maxi(1, int(task.get("count", task.get("required", 3))))
 	show_decoy = bool(task.get("decoy", true))

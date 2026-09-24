@@ -203,6 +203,15 @@ func _orbit(screen: Control, buttons: Array) -> void:
 		return
 	var orbit := OrbitMenu.new()
 	orbit.name = "Orbit"
+	if screen == tutorials_pick_screen:
+		# La pantalla de tutoriales es la más cargada (las 17 prácticas
+		# del juego): su arco se encoge para que ENTRE COMPLETA en la
+		# ventana de 1152x648 sin recortar ningún botón.
+		orbit.sphere_radius = 56.0
+		orbit.side_margin = 12.0
+		orbit.gap = 8.0
+		orbit.max_button_width = 320.0
+		orbit.max_span_deg = 170.0
 	for raw in buttons:
 		var button := raw as Button
 		if button == null:
@@ -252,6 +261,9 @@ func _build_info_layout() -> void:
 	_panel_level = _split_columns(level_screen)
 	_panel_section = _split_columns(tutorial_options_screen)
 	_panel_pick = _split_columns(tutorials_pick_screen)
+	# La ficha de tutoriales es más estrecha: así el conjunto (botones +
+	# ficha) siempre cabe entero en la ventana.
+	_panel_pick.custom_minimum_size = Vector2(470, 400)
 
 	_wire_info(level_buttons[0], _panel_level, Game.SECTION_NAMES[0], Game.SECTION_INFO[0])
 	_wire_info(level_buttons[1], _panel_level, Game.SECTION_NAMES[1], Game.SECTION_INFO[1])
@@ -438,9 +450,9 @@ func _open_tutorials_pick() -> void:
 		pick_title.text = "TUTORIALES · %s" % Game.SECTION_NAMES[_current_section - 1]
 	if pick_hint:
 		pick_hint.text = (
-			"Siete minijuegos del mundo de software: cada uno en su habitación, sin cronómetro."
+			"Siete minijuegos, cada uno en su habitación, sin cronómetro."
 			if software else
-			"Piezas y mecánicas del taller: cada una en su habitación, sin cronómetro."
+			"Piezas y mecánicas del taller, sin cronómetro."
 		)
 	if mechanics_header:
 		mechanics_header.visible = not software

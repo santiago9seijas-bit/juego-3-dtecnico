@@ -14,7 +14,7 @@ func _ready() -> void:
 	_seccion_y_nivel()
 	_ficha_y_pendrive()
 	await _minijuegos()
-	_tutoriales()
+	await _tutoriales()
 	await _menu()
 	await _sala()
 	await _regresion()
@@ -102,6 +102,7 @@ func _minijuegos() -> void:
 
 	Game.start_level(1, Game.SECTION_SOFTWARE)
 	_check(Game.pendrive.is_empty(), "el nivel empieza con el pendrive vacio")
+	_check(Game.pendrive_pc == 0, "…y el pendrive empieza FUERA de todas las PCs")
 
 	# ---- El cartel del pendrive: se ve QUÉ LE FALTA a cada PC -------
 	var pc_preview := _pc(1)
@@ -128,20 +129,26 @@ func _minijuegos() -> void:
 	_check(hud.software_panel.visible, "y su ventana se abre")
 	_check(Game.is_minigame_open, "el juego avisa que hay una ventana abierta")
 	_check(browser.requested.size() == 5, "pide los 5 archivos que faltan")
-	_check(browser.show_ads, "y trae anuncios falsos")
-	_check(browser._files.size() == Game.SW_ITEM_ORDER.size(), "la pagina lista los 6 archivos")
+	_check(browser._files.size() == browser.requested.size(), "y SOLO lista esos 5 (sin archivos de relleno)")
+	_check(browser._requester_label(browser.requested[0]).contains("lo pide"),
+		"cada fila lleva su etiqueta de qué PC lo pide")
+	_check(hud.software_usb_row.visible, "la PC de INTERNET exige el pendrive metido")
+	_check(hud.software_usb_button.text.contains("INSERTAR"), "con su boton INSERTAR PENDRIVE")
+	_check(Game.pendrive_pc == 0, "y el pendrive arranca FUERA de todas las PCs")
 	_check(hud.software_pendrive.text.contains("vacío"), "al abrir la PC 1 el pendrive aparece vacio")
 	_check(hud.software_pendrive.text.contains("POR BAJAR"),
 		"y la PC 1 anuncia lo que aún queda por bajar")
 
 	var errs := Game.errors
-	browser._on_ad_pressed(0, Button.new())
-	_check(Game.errors == errs + 1, "pulsar un anuncio instala malware y penaliza")
-	_check(browser._popups_open >= 1, "y aparece una ventana emergente")
-
 	var first: String = browser.requested[0]
 	browser._on_row_pressed(first)
-	_check(browser._active == first, "la primera descarga arranca")
+	_check(browser._active == "", "SIN el pendrive metido no arranca ninguna descarga")
+	_check(Game.errors == errs, "…y solo avisa en rojo, sin castigar")
+	Game.pendrive_plug(1)
+	_check(Game.pendrive_in(1), "al pulsar INSERTAR el pendrive queda enchufado en la PC 1")
+	browser._on_row_pressed(first)
+	_check(browser._active == first, "con el pendrive metido la primera descarga arranca")
+	_check(browser._popups_open >= 1, "y aparece una ventana emergente")
 	browser._on_row_pressed(browser.requested[1])
 	_check(browser._active == first, "no se pueden apilar descargas")
 	browser._tick(10.0)
@@ -179,6 +186,12 @@ func _minijuegos() -> void:
 	if drivers == null:
 		hud.free()
 		return
+	_check(hud.software_usb_row.visible, "la PC de controladores tambien exige el pendrive")
+	_check(Game.pendrive_pc == 1, "…y de momento el pendrive sigue metido en la PC 1")
+	drivers._install("driver_nvidia")
+	_check(not drivers.is_installed("driver_nvidia"), "SIN el pendrive metido en esta PC NO instala nada")
+	Game.pendrive_plug(2)
+	_check(Game.pendrive_pc == 2, "al meterlo en la PC 2 sale solo de la 1")
 	_check(drivers.items.size() == 3, "tres secciones: NVIDIA, AMD e Intel")
 	_check(hud.software_pendrive.text.contains("listo para esta PC"),
 		"con todo ya bajado el cartel confirma que esta PC lo tiene en el pendrive")
@@ -203,6 +216,7 @@ func _minijuegos() -> void:
 	# ---- PC 3 · SISTEMA OPERATIVO (idioma + animación final) -------
 	var pc3 := _pc(2)
 	hud.open_software(pc3)
+	Game.pendrive_plug(3)
 	var os_pc: Node = _mg(hud)
 	_check(os_pc != null and os_pc is OsInstallMinigame, "la PC 3 abre el instalador de SISTEMA")
 	if os_pc == null:
@@ -296,6 +310,7 @@ func _minijuegos() -> void:
 	# ---- PC 6 · CAMBIAR DE SISTEMA (quitar uno y poner otro) --------
 	var pc6 := _pc(5)
 	hud.open_software(pc6)
+	Game.pendrive_plug(6)
 	var swap: Node = _mg(hud)
 	_check(swap != null and swap is OsSwapMinigame, "la PC 6 abre CAMBIAR DE SISTEMA")
 	if swap == null:
@@ -320,36 +335,38 @@ func _minijuegos() -> void:
 	_check(6 in Game.repaired, "con el cambio de sistema se repara la PC 6")
 	pc6.free()
 
-	# ---- PC 7 · ANUNCIOS (desinstalar el bloatware, no lo útil) -----
+	# ---- PC 7 · ANUNCIOS (cerrar ventanas emergentes con ✕ falsa) ---
 	var pc7 := _pc(6)
 	hud.open_software(pc7)
 	var ads: Node = _mg(hud)
-	_check(ads != null and ads is AdsMinigame, "la PC 7 abre el desinstalador de ANUNCIOS")
+	_check(ads != null and ads is AdsMinigame, "la PC 7 abre el MINIJUEGO DE VENTANAS EMERGENTES")
 	if ads == null:
 		hud.free()
 		return
-	_check(ads.items.size() == 3, "hay 3 programas de publicidad que quitar")
-	_check(not bool(AdsMinigame.program("winrar").bloat), "WinRAR es un programa util")
+	_check(hud.software_usb_row.visible == false, "esta PC NO exige el pendrive")
+	_check(ads.count == 3, "el nivel pide cerrar 3 ventanas de anuncios")
+	_check(ads._open.size() == 3, "y las tres se abren a la vez")
+	_check(_steps_of(ads) != null, "con sus pasos 1, 2 y 3 apilados")
+	_check(ads._counter.text.contains("CERRADAS"), "y un marcador grande de lo que llevas cerrado")
+	var fake_id := -1
+	for i: int in ads._open:
+		if bool(ads._open[i].get("fake", false)):
+			fake_id = i
+	_check(fake_id >= 0, "una de las ventanas trae la ✕ FALSA")
 	errs = Game.errors
-	ads._on_remove_pressed("winrar")
-	_check(Game.errors == errs + 1, "quitar un programa util penaliza")
-	_check(bool(ads.state.get("protected", {}).get("winrar", false)), "y queda marcado como util")
-	ads._on_remove_pressed("turbo")
-	_check(ads._view == "confirm", "muestra el aviso de despedida con su trampa")
-	ads._on_trick_no()
-	_check(ads.trick_count() == 1, "el boton grande NO desinstala: ahi esta la trampa")
-	ads._on_remove_pressed("turbo")
-	_check(ads._pending == "turbo", "hay que volver a pedir la desinstalacion")
-	ads._on_confirm_yes()
-	ads.tick(1.0)
-	_check(ads.is_removed("turbo"), "el primero desinstalado de verdad")
-	for id: String in ["quickdeal", "videoplus"]:
-		ads._on_remove_pressed(id)
-		ads._on_confirm_yes()
-		ads.tick(1.0)
-		_check(ads.is_removed(id), "%s desinstalado" % id)
-	_check(ads.removed_count() == 3, "los 3 programas de anuncios fuera")
-	_check(ads._all_done(), "la PC queda solo con los programas utiles")
+	ads._on_close(fake_id)
+	_check(ads._open.size() == 4, "la ✕ falsa NO cierra: abre OTRA ventana")
+	_check(bool(ads._open[fake_id].get("used", false)), "y esa ✕ queda ya gastada")
+	_check(Game.errors == errs + 1, "acumular 4 ventanas a la vez penaliza UNA sola vez")
+	ads._on_close(fake_id)
+	_check(ads._open.size() == 3, "la segunda vez la ✕ cierra de verdad")
+	var cierre := 0
+	while not ads._open.is_empty() and cierre < 20:
+		cierre += 1
+		var open_ids: Array = ads._open.keys()
+		ads._on_close(int(open_ids[0]))
+	_check(ads._open.is_empty(), "y se acaban cerrando TODAS las ventanas")
+	_check(ads._done(), "la PC queda limpia de anuncios")
 	await get_tree().create_timer(1.2).timeout
 	_check(7 in Game.repaired, "con la PC sin anuncios se repara la PC 7")
 	_check(Game.repaired.size() == 7, "las 7 PCs del mundo de software quedan reparadas")
@@ -406,6 +423,40 @@ func _tutoriales() -> void:
 	_check(Game.pendrive.is_empty(), "el tutorial de hardware NO usa el pendrive")
 	Game.finish_tutorial()
 
+	# LAS PANTALLAS DEL TUTORIAL TIENEN QUE ENTRAR EN LA VENTANA:
+	# los botones EMPEZAR / VOLVER y el de "terminado" nunca se recortan.
+	var hud_t: Node = load("res://scenes/ui/hud.tscn").instantiate()
+	add_child(hud_t)
+	await get_tree().process_frame
+	Game.start_tutorial("download")
+	await get_tree().create_timer(0.6).timeout
+	_check(hud_t.tut_intro.visible, "la introduccion del tutorial se abre")
+	_check(_dentro(hud_t.tut_intro_start) and _dentro(hud_t.tut_intro_back),
+		"los botones EMPEZAR y VOLVER se ven COMPLETOS")
+	_check(_dentro(hud_t.tut_intro_title) and _dentro(hud_t.tut_intro_hint),
+		"…y también el título y la ayuda")
+	_check(hud_t.tut_intro_body.get_parent() is ScrollContainer,
+		"el texto largo va en un scroll: nada queda cortado")
+	_check(hud_t.tut_intro_start.get_parent() is HBoxContainer
+		and hud_t.tut_intro_start.get_parent() != hud_t.tut_intro_body.get_parent()
+		and hud_t.tut_intro_start.get_parent().get_parent()
+			== hud_t.tut_intro_body.get_parent().get_parent(),
+		"…y EMPEZAR/VOLVER quedan FUERA del scroll, siempre a la vista")
+	_check(hud_t.tut_intro_start.get_parent().get_parent() == hud_t.tut_intro_title.get_parent(),
+		"…y el scroll NO echa los botones de la caja")
+	# En modo tutorial "reparar" NO anota puntos: solo avisa y enseña la
+	# pantalla de TUTORIAL TERMINADO.
+	Game.mark_repaired(1)
+	await get_tree().create_timer(0.6).timeout
+	_check(hud_t.tut_complete.visible, "al terminar se ve la pantalla de TUTORIAL TERMINADO")
+	_check(_dentro(hud_t.tut_complete_text) and _dentro(hud_t.tut_repeat_button)
+		and _dentro(hud_t.tut_complete_exit),
+		"…y esa pantalla también cabe ENTERA en la ventana")
+	Game.finish_tutorial()
+	Game.tutorial_active = false
+	hud_t.free()
+	Game.hud = null
+
 # ------------------------------------------------------------------
 # El menú: 7 botones de software, sección 2 y su único nivel
 # ------------------------------------------------------------------
@@ -422,13 +473,22 @@ func _menu() -> void:
 	_check(not menu.tut_ram_button.visible, "en la seccion 2 NO se ven los tutoriales de piezas")
 	_check(menu.mechanics_header.visible == false, "el encabezado de mecanicas se oculta")
 	_check(menu.pick_title.text.contains("SOFTWARE"), "el titulo del menu indica el mundo")
-	await get_tree().process_frame
+	# La pantalla entra deslizándose desde la izquierda (0,34 s) y los
+	# botones uno tras otro: se espera a que acabe antes de medir.
+	await get_tree().create_timer(1.0).timeout
+	_check(_dentro_o_avisa(menu.tutorials_pick_screen.get_node_or_null("Columns")),
+		"la pantalla de tutoriales (seccion 2) cabe ENTERA en la ventana")
+	for part: String in Game.SOFTWARE_TUTORIALS:
+		_check(_dentro(menu._tut_software_buttons[part]),
+			"…y el boton de %s se ve COMPLETO" % Game.PART_TITLES[part])
 
 	menu._current_section = 1
 	menu._open_tutorials_pick()
 	_check(menu.tut_ram_button.visible, "en la seccion 1 se ven los tutoriales de piezas")
 	_check(not menu._tut_software_buttons["download"].visible, "y NO se ven los de software")
-	await get_tree().process_frame
+	await get_tree().create_timer(1.0).timeout
+	_check(_dentro_o_avisa(menu.tutorials_pick_screen.get_node_or_null("Columns")),
+		"la pantalla de tutoriales (seccion 1, 11 botones) TAMBIEN cabe entera")
 
 	# Entrar al mundo por el menú: sección 2 → su título, su ficha y su nivel.
 	menu._select_section(2)
@@ -645,6 +705,43 @@ func _control_at(from: Node, pos: Vector2) -> Control:
 					and ctrl.get_global_rect().has_point(pos):
 				return ctrl
 	return null
+
+# ¿Este Control cabe en la ventana real del juego (1152x648)?
+# En headless la ventana virtual mide 64x64: ahí las posiciones no
+# sirven, así que solo se mide el TAMAÑO (el de un control de un
+# contenedor no depende del viewport). Cuando la prueba corre en una
+# ventana de verdad se comprueba además que no se sale por ningún lado.
+const VENTANA := Vector2(1152, 648)
+
+func _dentro(node: Node) -> bool:
+	if node == null or not (node is Control):
+		return false
+	var ctrl := node as Control
+	if not ctrl.is_visible_in_tree():
+		return false
+	var r: Rect2 = ctrl.get_global_rect()
+	var vp: Vector2 = ctrl.get_viewport().get_visible_rect().size
+	if vp.x >= VENTANA.x - 1.0 and vp.y >= VENTANA.y - 1.0:
+		return r.position.x >= -0.6 and r.position.y >= -0.6 \
+			and r.end.x <= vp.x + 0.6 and r.end.y <= vp.y + 0.6
+	return r.size.x <= VENTANA.x + 0.6 and r.size.y <= VENTANA.y + 0.6
+
+# Igual que _dentro, pero si NO cabe imprime las medidas para saber qué
+# es lo que se está saliendo de la ventana.
+func _dentro_o_avisa(node: Node) -> bool:
+	var ok := _dentro(node)
+	if not ok and node is Control:
+		var ctrl := node as Control
+		var r: Rect2 = ctrl.get_global_rect()
+		var chain := ""
+		var p: Node = ctrl
+		while p is Control:
+			chain += "%s[%s] " % [p.name, str((p as Control).visible)]
+			p = p.get_parent()
+		print("   [layout] %s mide %.0fx%.0f (ventana %.0fx%.0f) visible_en_arbol=%s · %s" % [
+			ctrl.name, r.size.x, r.size.y, VENTANA.x, VENTANA.y,
+			str(ctrl.is_visible_in_tree()), chain])
+	return ok
 
 func _check(condition: bool, label: String) -> void:
 	if condition:

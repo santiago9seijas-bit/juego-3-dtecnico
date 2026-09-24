@@ -9,6 +9,8 @@ signal finished
 
 const OLD_OS := "Windows 10 (versión 1809)"
 
+# PC en la que está abierto este minijuego (sirve para el hueco USB).
+var pc_id := 0
 var state: Dictionary = {}
 var flow: OsFlow
 var items: Array = []
@@ -18,7 +20,8 @@ var _remove_button: Button
 var _remove_entry: Dictionary = {}
 var _status: Label
 
-func setup(new_state: Dictionary, task: Dictionary) -> void:
+func setup(new_state: Dictionary, task: Dictionary, new_pc_id := 0) -> void:
+	pc_id = new_pc_id
 	state = new_state if new_state != null else {}
 	items = SwUI.str_array(task.get("items", []))
 	if items.is_empty():
@@ -52,7 +55,7 @@ func setup(new_state: Dictionary, task: Dictionary) -> void:
 	add_child(SwUI.section_header("Paso 2 · Instalar el sistema nuevo", UiStyle.CYAN))
 	flow = OsFlow.new()
 	add_child(flow)
-	flow.setup(state, items)
+	flow.setup(state, items, pc_id)
 	flow.installed.connect(func() -> void: finished.emit())
 
 	_status = SwUI.label("Antes de instalar hay que quitar el sistema viejo.", 15, UiStyle.TEXT_DIM)
@@ -67,6 +70,10 @@ func setup(new_state: Dictionary, task: Dictionary) -> void:
 	# sistema ya está instalado, flow.setup() lo hace él solo (y con un único
 	# reloj). Programarlo aquí duplicaba la señal `finished` de esta PC.
 	# (El guard de os_flow se libera solo si cierras la ventana antes de tiempo.)
+
+func refresh_usb() -> void:
+	if flow:
+		flow.refresh_usb()
 
 func _refresh() -> void:
 	if _erase_check == null:

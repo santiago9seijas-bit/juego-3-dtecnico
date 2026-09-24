@@ -28,6 +28,8 @@ const BOOT_LINES := [
 ]
 const LINE_TIME := 0.45
 
+# PC en la que está abierto este minijuego (sirve para el hueco USB).
+var pc_id := 0
 var state: Dictionary = {}
 var items: Array = []
 
@@ -45,7 +47,8 @@ var _lines_box: VBoxContainer
 var _success: VBoxContainer
 var _status: Label
 
-func setup(new_state: Dictionary, wanted_items: Array) -> void:
+func setup(new_state: Dictionary, wanted_items: Array, new_pc_id := 0) -> void:
+	pc_id = new_pc_id
 	state = new_state if new_state != null else {}
 	items = wanted_items
 	_build()
@@ -115,7 +118,7 @@ func _build() -> void:
 	_success.add_child(SwUI.label("El equipo ya puede arrancar. Puedes cerrar esta ventana.", 15, UiStyle.TEXT_DIM))
 	add_child(_success)
 
-	_status = SwUI.label("Selecciona el sistema y el idioma para habilitar el botón INSTALAR.", 15, UiStyle.TEXT_DIM)
+	_status = SwUI.label("Paso 1: mete el PENDRIVE en esta PC y elige el sistema operativo.", 15, UiStyle.TEXT_DIM)
 	add_child(_status)
 
 # ------------------------------------------------------------------
@@ -123,6 +126,9 @@ func _build() -> void:
 # ------------------------------------------------------------------
 func _pick_os(id: String) -> void:
 	if _installing or _done():
+		return
+	if not _usb_ok():
+		_set_status("✗ El pendrive NO está metido en esta PC: pulsa INSERTAR PENDRIVE (arriba).", Color(1, 0.45, 0.3))
 		return
 	if id not in Game.pendrive:
 		_set_status(
@@ -160,22 +166,43 @@ func _refresh() -> void:
 		return
 	var chosen := str(state.get("os_id", ""))
 	var lang := str(state.get("lang", ""))
+	var usb := _usb_ok()
 	for id in _os_buttons:
 		var b: Button = _os_buttons[id]
 		var on_deck: bool = id in Game.pendrive
-		b.disabled = (not on_deck) or _installing or _done()
-		b.text = "USAR ESTE" if on_deck else "NO ESTÁ EN PENDRIVE"
-		if id == chosen and not _done():
+		b.disabled = (not on_deck) or (not usb) or _installing or _done()
+		if not usb and not _done():
+			# Sin el pendrive metido en ESTA PC no hay nada que elegir.
+			b.text = "METE EL PENDRIVE"
+		elif id == chosen and not _done():
 			b.text = "ELEGIDO ✓"
+		elif on_deck:
+			b.text = "USAR ESTE"
+		else:
+			b.text = "NO ESTÁ EN PENDRIVE"
 	for id in _lang_buttons:
 		var b: Button = _lang_buttons[id]
 		b.disabled = _installing or _done()
 		b.text = "ELEGIDO ✓" if id == lang else _language_button_text(id)
-	_install_button.disabled = _installing or _done() or chosen == "" or lang == ""
+	_install_button.disabled = _installing or _done() or chosen == "" or lang == "" or not usb
 	_install_button.text = "INSTALADO ✓" if _done() else "INSTALAR SISTEMA OPERATIVO"
+	if not usb and not _done():
+		_set_status("✗ El pendrive NO está metido en esta PC: pulsa INSERTAR PENDRIVE (arriba).", Color(1, 0.45, 0.3))
+
+# El pendrive está enchufado en la PC de este minijuego.
+func _usb_ok() -> bool:
+	return Game.pendrive_in(pc_id)
+
+# El jugador acaba de meter o sacar el pendrive: se repinta todo lo que
+# depende de él (botones de sistema, instalación…).
+func refresh_usb() -> void:
+	_refresh()
 
 func _start_install() -> void:
 	if _installing or _done():
+		return
+	if not _usb_ok():
+		_set_status("✗ El pendrive NO está metido en esta PC: pulsa INSERTAR PENDRIVE (arriba).", Color(1, 0.45, 0.3))
 		return
 	if str(state.get("os_id", "")) not in Game.pendrive:
 		_set_status("Ese sistema ya no está en el pendrive: vuelve a bajarlo en la PC de INTERNET.", Color(1, 0.4, 0.4))

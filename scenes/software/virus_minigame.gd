@@ -118,6 +118,8 @@ class QuarantineZone extends PanelContainer:
 		if target:
 			target.quarantine(int((data as Dictionary).sw_virus))
 
+# PC en la que está abierto este minijuego (sirve para el hueco USB).
+var pc_id := 0
 var state: Dictionary = {}
 var cards: Array = []
 var count := 4
@@ -133,11 +135,15 @@ var _scan_button: Button
 var _scan_entry: Dictionary = {}
 var _grid: GridContainer
 var _status: Label
+# Estado GRANDE del minijuego: en qué paso se está (1 · analizar /
+# 2 · cuarentena) y cuánto queda.
+var _stage: Label
 
 # ------------------------------------------------------------------
 # Construcción
 # ------------------------------------------------------------------
-func setup(new_state: Dictionary, task: Dictionary) -> void:
+func setup(new_state: Dictionary, task: Dictionary, new_pc_id := 0) -> void:
+	pc_id = new_pc_id
 	state = new_state if new_state != null else {}
 	count = maxi(1, int(task.get("count", 4)))
 	show_decoy = bool(task.get("decoy", true))
@@ -147,13 +153,16 @@ func setup(new_state: Dictionary, task: Dictionary) -> void:
 	add_theme_constant_override("separation", 8)
 
 	add_child(SwUI.section_header("Analizador de amenazas", UiStyle.MAGENTA))
+	# Estado grande: el jugador ve SIEMPRE en qué paso está y qué falta.
+	_stage = SwUI.label("", 20, UiStyle.MAGENTA)
+	add_child(_stage)
 	add_child(SwUI.rich(
 		"[color=#ff2e88][b]Hay archivos infectados[/b][/color] por el disco. " +
 		"Primero hay que analizarlos y después mandarlos a la cuarentena."))
 	add_child(SwUI.steps([
-		{"n": 1, "text": "Pulsa [color=#ffb020]ANALIZAR[/color] para que el antivirus revise todos los archivos."},
-		{"n": 2, "text": "Arrastra cada archivo [color=#ff2e88]INFECTADO[/color] hasta la CUARENTENA de abajo."},
-		{"n": 3, "text": "NO arrastres los archivos buenos: se borran datos y restan puntos."},
+		{"n": 1, "text": "Pulsa [color=#ffb020]ANALIZAR DISCO[/color] para que el antivirus revise todos los archivos."},
+		{"n": 2, "text": "Espera a que el análisis termine: los infectados se pintan de [color=#ff2e88]MAGENTA[/color]."},
+		{"n": 3, "text": "Arrastra cada archivo [color=#ff2e88]INFECTADO[/color] hasta la CUARENTENA; NO toques los buenos."},
 	]))
 
 	_scan_entry = SwUI.bar_row("Analizando", UiStyle.MAGENTA)
@@ -188,7 +197,7 @@ func setup(new_state: Dictionary, task: Dictionary) -> void:
 	zone_title.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
 	zone.add_child(zone_title)
 
-	_status = SwUI.label("Pulsa ANALIZAR para empezar: todavía no sabes qué está infectado.", 16, UiStyle.TEXT_DIM)
+	_status = SwUI.label("Pulsa ANALIZAR para empezar: todavía no sabes qué está infectado.", 17, UiStyle.TEXT_DIM)
 	add_child(_status)
 
 	_scanned = bool(state.get("scanned", false))
@@ -197,9 +206,26 @@ func setup(new_state: Dictionary, task: Dictionary) -> void:
 		_scan_button.disabled = true
 		_scan_button.text = "ANALIZADO ✓"
 		_set_status(_remaining_text(), UiStyle.CYAN_SOFT)
+	_refresh_stage()
 	if _all_done():
 		_set_status("¡DISCO LIMPIO! Todos los virus están en cuarentena.", Color(0.3, 1, 0.5))
 		_schedule_finish()
+
+# Rótulo grande de en qué paso se está (lo repintan setup, el análisis y
+# cada archivo mandado a cuarentena).
+func _refresh_stage() -> void:
+	if _stage == null:
+		return
+	if _all_done():
+		_stage.text = "✔ DISCO LIMPIO · NADA QUE HACER"
+		_stage.add_theme_color_override("font_color", Color(0.3, 1, 0.5))
+	elif not _scanned:
+		_stage.text = "PASO 1 DE 2 · PULSA EL BOTÓN ANALIZAR DISCO"
+		_stage.add_theme_color_override("font_color", UiStyle.MAGENTA)
+	else:
+		_stage.text = "PASO 2 DE 2 · EN CUARENTENA %d DE %d · FALTAN %d" % [
+			cleaned_count(), _needed(), maxi(0, _needed() - cleaned_count())]
+		_stage.add_theme_color_override("font_color", UiStyle.MAGENTA)
 
 # Reparte las tarjetas: `count` infectados y, si hay trampas, también
 # `count` archivos buenos en medio. Siempre empieza un infectado.
@@ -283,6 +309,7 @@ func _tick(delta: float) -> void:
 		if is_instance_valid(card) and not bool(state.cleaned.get(str(i), false)):
 			card.set_revealed(true)
 	_set_status("Análisis terminado. " + _remaining_text(), UiStyle.CYAN_SOFT)
+	_refresh_stage()
 
 # ------------------------------------------------------------------
 # Cuarentena
@@ -316,6 +343,7 @@ func quarantine(index: int) -> void:
 	state.cleaned[str(index)] = true
 	card.mark_clean()
 	_quarantined_count = state.cleaned.size()
+	_refresh_stage()
 	if _all_done():
 		_set_status("¡DISCO LIMPIO! Todos los virus están en cuarentena.", Color(0.3, 1, 0.5))
 		_schedule_finish()

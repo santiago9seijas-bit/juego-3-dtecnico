@@ -1,23 +1,21 @@
 class_name BrowserMinigame
 extends VBoxContainer
 
-# MINIJUEGO · NAVEGADOR DE LA PC DE INTERNET: la página de descargas
-# trae dos secciones, DRIVERS (NVIDIA / AMD / Intel) e IMÁGENES DE
-# SISTEMA OPERATIVO. Lo que se baja queda guardado en el PENDRIVE, que
-# después se lleva a las otras PCs de la sala.
+# MINIJUEGO · NAVEGADOR DE LA PC DE INTERNET.
 #
-# Mecánicas: una descarga a la vez, la primera se traba a mitad y hay
-# que pulsar REANUDAR, las ventanas emergentes hay que cerrarlas con su
-# botón CERRAR (si se apilan 3 entra malware) y los anuncios falsos
-# instalan malware. Todo se construye por código y se mueve con _tick()
-# para poder probarlo sin esperar el reloj real.
+# La página lista SOLO los archivos que piden las otras PCs de la sala y
+# cada fila lleva su etiqueta "→ lo pide PC X · TIPO", así que nunca hace
+# falta adivinar qué bajar. Lo que se baja queda guardado en el PENDRIVE,
+# que además tiene que estar METERIDO en esta PC (botón INSERTAR PENDRIVE)
+# para poder descargar.
+#
+# Mecánicas: una descarga a la vez, la primera se traba a mitad y hay que
+# pulsar REANUDAR, y las ventanas emergentes se cierran con su botón
+# CERRAR (si se apilan POPUP_LIMIT entra malware). Todo se construye por
+# código y se mueve con _tick() para poder probarlo sin esperar el reloj.
 
 signal finished
 
-const AD_TEXTS := [
-	"¡¡GANA UN PREMIO! CLIC AQUÍ →",
-	"TU PC ESTÁ LENTA: LIMPIA YA 💾",
-]
 const POPUP_TEXTS := [
 	"🏆 ¡FELICIDADES! Eres el visitante 1.000.000. Reclama tu premio AHORA.",
 	"⚠ Tu reproductor de video está DESACTUALIZADO: instálalo gratis en 1 clic.",
@@ -28,8 +26,9 @@ const STALL_AT := 0.55
 const POPUP_LIMIT := 3
 
 var requested: Array = []
-var show_ads := true
 
+# PC en la que está abierto este minijuego (sirve para el hueco USB).
+var pc_id := 0
 var state: Dictionary = {}
 # Un diccionario por archivo, GUARDADO en `state` para que cerrar la
 # ventana no pierda descargas a medias.
@@ -45,22 +44,23 @@ var _running := false
 
 var _url_label: Label
 var _rows_box: VBoxContainer
-var _ads_box: HBoxContainer
 var _popups_box: VBoxContainer
+var _counter: Label
 var _status: Label
 
 # ------------------------------------------------------------------
 # Construcción
 # ------------------------------------------------------------------
-func setup(new_state: Dictionary, task: Dictionary) -> void:
+func setup(new_state: Dictionary, task: Dictionary, new_pc_id := 0) -> void:
+	pc_id = new_pc_id
 	state = new_state if new_state != null else {}
 	requested = SwUI.str_array(task.get("items", Game.SW_DOWNLOAD_REQUEST))
-	show_ads = bool(task.get("decoy", true))
 	if not state.has("files"):
 		state.files = {}
 	var saved: Dictionary = state.files
 	_files.clear()
-	for id in Game.SW_ITEM_ORDER:
+	# SOLO se listan los archivos que piden las otras PCs: nada de relleno.
+	for id in requested:
 		if saved.has(id):
 			_files[id] = saved[id]
 		else:
@@ -112,25 +112,28 @@ func _build() -> void:
 	_url_label = SwUI.label("https://www.descargas-del-taller.net/centro-de-descargas", 15, UiStyle.CYAN_SOFT)
 	url_box.add_child(_url_label)
 
-	var page := SwUI.label("CENTRO DE DESCARGAS · lo que bajes queda en el PENDRIVE", 20, UiStyle.CYAN)
+	var page := SwUI.label("CENTRO DE DESCARGAS · todo lo que bajes queda en el PENDRIVE", 20, UiStyle.CYAN)
 	page.add_theme_color_override("font_outline_color", Color(UiStyle.CYAN.r, UiStyle.CYAN.g, UiStyle.CYAN.b, 0.35))
 	page.add_theme_constant_override("font_outline_size", 6)
 	add_child(page)
 
-	# Instrucciones: el número SOLO en su línea y la explicación debajo.
+	# Contador grande: qué falta todavía, de un vistazo.
+	_counter = SwUI.label("", 18, Color(1, 0.69, 0.13))
+	add_child(_counter)
+
 	add_child(SwUI.steps([
-		{"n": 1, "text": "Pulsa DESCARGAR en los archivos que marcan [color=#ffb020]LO PIDEN OTRAS PCS[/color]."},
-		{"n": 2, "text": "Si la descarga se corta a mitad, pulsa [color=#ff2e88]REANUDAR[/color]."},
+		{"n": 1, "text": "Cada fila tiene una etiqueta [color=#ff2e88]→ lo pide PC X · TIPO[/color]: son los ÚNICOS archivos que necesitas."},
+		{"n": 2, "text": "Pulsa [color=#19e6ff]DESCARGAR[/color]. Si se corta a mitad, pulsa [color=#ff2e88]REANUDAR[/color]."},
 		{"n": 3, "text": "Cierra las ventanas emergentes con su botón [color=#ff2e88]CERRAR[/color]: si se apilan %d, entra malware." % POPUP_LIMIT},
 	]))
-	add_child(SwUI.rich("[color=#ff2e88][b]NO[/b][/color] pulses los anuncios de abajo: son trampas que instalan malware."))
+	add_child(SwUI.rich("[color=#ffb020]El PENDRIVE tiene que estar METERIDO en esta PC[/color]: si no, el botón DESCARGAR no funciona."))
 
-	# Lista de descargas agrupada por sección.
-	_rows_box = SwUI.vbox(8)
+	# Lista de descargas: SOLO lo que piden las otras PCs, por sección.
+	_rows_box = SwUI.vbox(10)
 	add_child(_rows_box)
 	for section in Game.SW_SECTIONS:
 		var ids: Array = []
-		for id in Game.SW_ITEM_ORDER:
+		for id in requested:
 			if str(Game.SW_ITEMS.get(id, {}).get("section", "")) == str(section.id):
 				ids.append(id)
 		if ids.is_empty():
@@ -138,30 +141,6 @@ func _build() -> void:
 		_rows_box.add_child(SwUI.section_header(str(section.title), Color(str(section.color))))
 		for id in ids:
 			_rows_box.add_child(_build_row(id))
-
-	# Anuncios falsos (solo en el nivel; el tutorial los oculta).
-	_ads_box = SwUI.hbox(14)
-	_ads_box.visible = show_ads
-	add_child(_ads_box)
-	for i in AD_TEXTS.size():
-		var ad := Button.new()
-		ad.text = AD_TEXTS[i]
-		ad.custom_minimum_size = Vector2(410, 44)
-		ad.add_theme_font_size_override("font_size", 16)
-		var ad_style := StyleBoxFlat.new()
-		ad_style.bg_color = Color("2a0a1c")
-		ad_style.set_border_width_all(2)
-		ad_style.border_color = UiStyle.MAGENTA
-		ad_style.set_corner_radius_all(4)
-		ad_style.shadow_size = 8
-		ad_style.shadow_color = Color(UiStyle.MAGENTA, 0.5)
-		ad.add_theme_stylebox_override("normal", ad_style)
-		var ad_hover := ad_style.duplicate() as StyleBoxFlat
-		ad_hover.bg_color = Color("4a1030")
-		ad.add_theme_stylebox_override("hover", ad_hover)
-		ad.pressed.connect(_on_ad_pressed.bind(i, ad))
-		UiStyle.animate(ad)
-		_ads_box.add_child(ad)
 
 	# Ventanas emergentes.
 	_popups_box = SwUI.vbox(8)
@@ -174,9 +153,14 @@ func _build_row(id: String) -> Control:
 	var info: Dictionary = Game.SW_ITEMS.get(id, {})
 	var row := SwUI.hbox(12)
 
-	var info_box := SwUI.vbox(4)
+	var info_box := SwUI.vbox(3)
 	info_box.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 	row.add_child(info_box)
+
+	# LA ETIQUETA: qué PC pide este archivo y para qué (su tipo).
+	var who := SwUI.label(_requester_label(id), 15, UiStyle.MAGENTA)
+	who.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
+	info_box.add_child(who)
 
 	var head := SwUI.hbox(10)
 	info_box.add_child(head)
@@ -207,19 +191,47 @@ func _build_row(id: String) -> Control:
 	_row_ui[id] = {"bar": bar, "percent": percent, "button": button, "pill": pill}
 	return row
 
+# "→ lo pide PC 3 · CONTROLADORES" (o "...PC 3, PC 6 · SISTEMA...").
+func _requester_label(id: String) -> String:
+	var pcs: Array = []
+	var kinds: Array = []
+	for t in Game.current_tasks:
+		if str(t.get("kind", "")) == "download":
+			continue
+		if id not in SwUI.str_array(t.get("items", [])):
+			continue
+		pcs.append("PC %d" % int(t.get("id", 0)))
+		var k := str(Game.PART_TITLES.get(str(t.get("kind", "")), str(t.get("kind", ""))))
+		if k not in kinds:
+			kinds.append(k)
+	if pcs.is_empty():
+		return "→ LO PIDEN OTRAS PCS"
+	var tipo: String = " / ".join(kinds)
+	if pcs.size() == 1:
+		return "→ lo pide %s · %s" % [pcs[0], tipo]
+	return "→ lo piden %s · %s" % [", ".join(pcs), tipo]
+
+# Contador vivo: cuántos archivos siguen sin bajar.
+func _refresh_counter() -> void:
+	if _counter == null:
+		return
+	var missing := _missing_count()
+	if missing == 0:
+		_counter.text = "✓ TODO BAJADO · %d de %d archivos" % [requested.size(), requested.size()]
+		_counter.add_theme_color_override("font_color", Color(0.3, 1, 0.5))
+	else:
+		_counter.text = "✗ FALTAN %d DE %d ARCHIVOS PARA LAS OTRAS PCS" % [missing, requested.size()]
+		_counter.add_theme_color_override("font_color", Color(1, 0.69, 0.13))
+
 func _pill_text(id: String) -> String:
 	if id in Game.pendrive:
 		return "EN PENDRIVE ✓"
-	if id in requested:
-		return "LO PIDEN OTRAS PCS"
-	return "EXTRA"
+	return "FALTA · DESCÁRGALO"
 
 func _pill_color(id: String) -> Color:
 	if id in Game.pendrive:
 		return Color(0.3, 1, 0.5)
-	if id in requested:
-		return Color(1, 0.69, 0.13)
-	return UiStyle.TEXT_DIM
+	return Color(1, 0.69, 0.13)
 
 # ------------------------------------------------------------------
 # Descargas
@@ -249,6 +261,16 @@ func _tick(delta: float) -> void:
 	if f.progress >= 1.0:
 		_complete(_active)
 
+# ¿Está el pendrive enchufado en esta PC? Sin él no baja nada.
+func _usb_ok() -> bool:
+	return Game.pendrive_in(pc_id)
+
+# El jugador acaba de meter o sacar el pendrive.
+func refresh_usb() -> void:
+	if not _usb_ok() and _running:
+		_set_status("✗ El pendrive NO está metido en esta PC: pulsa INSERTAR PENDRIVE (arriba).", Color(1, 0.45, 0.3))
+	_refresh_ui()
+
 func _on_row_pressed(id: String) -> void:
 	if not _running:
 		return
@@ -259,6 +281,9 @@ func _on_row_pressed(id: String) -> void:
 		f.stalled = false
 		_set_status("Reanudando la descarga…", UiStyle.CYAN_SOFT)
 		_refresh_ui()
+		return
+	if not _usb_ok():
+		_set_status("✗ El pendrive NO está metido en esta PC: pulsa INSERTAR PENDRIVE (arriba).", Color(1, 0.45, 0.3))
 		return
 	if _active != "":
 		_set_status("Hay una descarga en curso: espera o pulsa REANUDAR.", Color(1, 0.85, 0.4))
@@ -319,6 +344,7 @@ func _emit_finished() -> void:
 	finished.emit()
 
 func _refresh_ui() -> void:
+	_refresh_counter()
 	for id in _row_ui:
 		_refresh_row(id)
 
@@ -353,16 +379,8 @@ func _refresh_row(id: String) -> void:
 		button.add_theme_color_override("font_color", UiStyle.TEXT)
 
 # ------------------------------------------------------------------
-# Anuncios y ventanas emergentes
+# Ventanas emergentes
 # ------------------------------------------------------------------
-func _on_ad_pressed(index: int, button: Button) -> void:
-	if not _running:
-		return
-	button.disabled = true
-	button.text = "%s  ✗ MALWARE" % AD_TEXTS[index]
-	_mistake("¡Ese botón era un ANUNCIO! Se instaló malware en la PC.")
-	_spawn_popup()
-
 func _spawn_popup() -> void:
 	if _popup_index >= POPUP_TEXTS.size():
 		return
@@ -386,6 +404,7 @@ func _spawn_popup() -> void:
 
 	var text := SwUI.label(POPUP_TEXTS[_popup_index], 15, UiStyle.TEXT)
 	_popup_index += 1
+	text.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
 	text.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 	row.add_child(text)
 

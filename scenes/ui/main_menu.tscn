@@ -278,13 +278,15 @@ grow_vertical = 2
 theme_override_constants/separation = 14
 
 [node name="PickTitle" type="Label" parent="TutorialsPickScreen/VBox"]
-theme_override_font_sizes/font_size = 32
+theme_override_font_sizes/font_size = 24
+custom_minimum_size = Vector2(500, 0)
 text = "TUTORIALES"
 horizontal_alignment = 1
 
 [node name="SectionHint" type="Label" parent="TutorialsPickScreen/VBox"]
 theme_override_font_sizes/font_size = 14
-text = "Piezas y mecánicas del taller: cada una en su habitación, sin cronómetro."
+custom_minimum_size = Vector2(500, 0)
+text = "Cada tutorial en su habitación, sin cronómetro."
 horizontal_alignment = 1
 
 [node name="TutorialsList" type="VBoxContainer" parent="TutorialsPickScreen/VBox"]

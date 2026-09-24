@@ -146,8 +146,8 @@ const SECTION_INFO := [
 	"Recorrerás la sala de servicio, examinarás cada computadora averiada, tomarás el repuesto correcto de la estantería y lo instalarás en el slot dañado. Juegas contra el reloj: cada reparación suma puntos y te devuelve unos segundos de tiempo.\n\n" +
 	"Está disponible en modo tutorial, sin prisa y sin penalizaciones, y en modo nivel con cronómetro para poner a prueba lo aprendido.",
 	"Instalación de sistemas operativos, controladores, limpieza de virus y optimización del equipo.\n\n" +
-	"Mundo de SOFTWARE: una sala con SIETE computadoras y ningún repuesto que cargar. El técnico mueve un PENDDRIVE: en la PC de INTERNET se bajan los drivers (NVIDIA, AMD, Intel) y las imágenes de los sistemas, y después se llevan a las demás PCs.\n\n" +
-	"Cada PC enseña un minijuego: instalar controladores por secciones de fabricante, instalar un sistema operativo (idioma y animación final), limpiar virus, terminar procesos, cambiar un sistema por otro y desinstalar los programas de anuncios.\n\n" +
+	"Mundo de SOFTWARE: una sala con SIETE computadoras y ningún repuesto que cargar. El técnico mueve un PENDRIVE: hay que METERLO en la PC de INTERNET (botón INSERTAR PENDRIVE) para bajar los drivers (NVIDIA, AMD, Intel) y las imágenes de los sistemas, y después llevarlo a las demás PCs.\n\n" +
+	"Cada PC enseña un minijuego: bajar solo lo que piden las otras PCs, instalar controladores por secciones de fabricante, instalar un sistema operativo (idioma y animación final), limpiar virus, terminar procesos, cambiar un sistema por otro y cerrar las ventanas emergentes de publicidad.\n\n" +
 	"Un solo nivel contra el cronómetro (7 tareas) y tutoriales propios para practicar cada minijuego sin prisa.",
 	"Montaje y mantenimiento de servidores: red, almacenamiento, usuarios y copias de seguridad.\n\n" +
 	"[color=#6f8ba0]Sección bloqueada: se habilitará más adelante.[/color]",
@@ -204,7 +204,7 @@ const PART_INFO := {
 	# Fichas del mundo de software (sección 2).
 	"download": {
 		"use": "Por el navegador se bajan de internet los controladores de fabricante y las imágenes de los sistemas operativos; todo queda guardado en el PENDRIVE que luego se lleva a las otras PCs.",
-		"fails": "Sin descargas no hay nada que instalar: los demás equipos se quedan esperando un driver o un sistema que nunca llega. Además, los anuncios falsos instalan malware y las ventanas emergentes abiertas dejan entrar más.",
+		"fails": "Sin descargas no hay nada que instalar: los demás equipos se quedan esperando un driver o un sistema que nunca llega. Además, sin el PENDRIVE metido en la PC de internet no se baja nada y las ventanas emergentes abiertas dejan entrar malware.",
 	},
 	"drivers": {
 		"use": "Un controlador (driver) traduce lo que pide el sistema a lo que entiende el hardware: gráfica, red, sonido. Se instalan por secciones de fabricante: NVIDIA, AMD e Intel.",
@@ -227,8 +227,8 @@ const PART_INFO := {
 		"fails": "Un sistema desactualizado ya no recibe parches, no corre los programas modernos y obliga a cambiar el equipo entero si no se sustituye.",
 	},
 	"ads": {
-		"use": "El desinstalador elimina los programas que el usuario no pidió: barras de ofertas, buscadores, reproductores de más y todo lo que solo muestra publicidad.",
-		"fails": "Esos programas abren ventanas solos, cambian el buscador, ralentizan el arranque y hasta instalan otros programas sin permiso.",
+		"use": "La PC se llena de ventanas emergentes de publicidad. Cada una tiene su botón ✕ CERRAR; el truco está en que alguna ✕ es FALSA y en vez de cerrar abre otra ventana más.",
+		"fails": "Si dejas las ventanas apiladas entran malware y programas que no pediste: ralentizan el arranque, cambian el buscador y molestan cada vez que enciendes la PC.",
 	},
 }
 
@@ -256,8 +256,9 @@ const LEVELS := [
 # SECCIÓN 2 · MUNDO DE SOFTWARE (la sección siguiente a la de hardware).
 # Una habitación grande con SIETE computadoras y SIN estanterías ni
 # papelera: aquí no se cargan repuestos, se mueve un PENDRIVE.
-#   1. INTERNET  → navegador para bajar drivers e imágenes de sistema
-#                  (anuncios falsos y ventanas emergentes incluidas).
+#   1. INTERNET  → navegador para bajar SOLO lo que piden las otras PCs
+#                  (etiqueta «lo pide PC X» + ventanas emergentes).
+#                  Exige el pendrive METERIDO en esa PC.
 #   2. DRIVERS   → instalar los drivers del pendrive por SECCIÓN de
 #                  fabricante (NVIDIA / AMD / Intel); si alguno dice
 #                  FALTA hay que volver a la PC de internet.
@@ -267,7 +268,7 @@ const LEVELS := [
 #                  cuarentena sin tocar los archivos buenos.
 #   5. PROCESOS  → administrador de tareas: terminar solo CPU > 50%.
 #   6. CAMBIAR   → desinstalar el sistema viejo y poner otro nuevo.
-#   7. ANUNCIOS  → desinstalar el bloatware sin caer en sus trampas.
+#   7. ANUNCIOS  → cerrar ventanas emergentes sin caer en la ✕ FALSA.
 # De momento es UN solo nivel con esas siete tareas.
 # ------------------------------------------------------------------
 const SECTION_SOFTWARE := 2
@@ -311,7 +312,7 @@ const SOFTWARE_PROBLEMS := [
 # Los tutoriales propios de este mundo: uno por minijuego.
 const SOFTWARE_TUTORIALS := ["download", "drivers", "os_install", "virus", "processes", "os_swap", "ads"]
 # Tareas más suaves para practicar cada minijuego sin presión:
-# menos acciones, sin anuncios y con el pendrive YA cargado con lo que
+# menos acciones, sin trampas y con el pendrive YA cargado con lo que
 # haga falta (así ninguna práctica se queda bloqueada a medias).
 const SOFTWARE_TUTORIAL_TASKS := {
 	"download": {"items": ["driver_nvidia"], "count": 1, "decoy": false, "prefill": []},
@@ -324,13 +325,13 @@ const SOFTWARE_TUTORIAL_TASKS := {
 }
 const SOFTWARE_TUTORIALS_MENU_TEXT := \
 	"Siete prácticas del mundo de software, cada una en su habitación y sin cronómetro, sin puntaje y sin penalizaciones.\n\n" + \
-	"DESCARGAS: se abre un navegador con una sola descarga pendiente. Pulsa el botón correcto, aguanta la barra de progreso (a la mitad puede cortarse y toca pulsar REANUDAR) y cierra las ventanas emergentes con su botón CERRAR. En la práctica no hay anuncios falsos.\n\n" + \
-	"CONTROLADORES: la PC trae tres secciones (NVIDIA, AMD e Intel) y hay que instalar cada driver que esté en el pendrive. En el nivel, una sección que dice FALTA significa que ese driver aún no se ha descargado en la PC de INTERNET.\n\n" + \
-	"SISTEMA OPERATIVO: se instala un sistema desde el pendrive: se elige el sistema, se elige el idioma y se espera la instalación hasta el cartel verde final.\n\n" + \
-	"VIRUS: primero ANALIZA el disco y después arrastra cada archivo infectado hasta la CUARENTENA, sin tocar los buenos.\n\n" + \
+	"DESCARGAS: se abre el navegador con SOLO los archivos que piden las otras PCs y cada fila lleva su etiqueta «→ lo pide PC X». Antes de bajar hay que meter el PENDRIVE en esa PC con su botón INSERTAR. Después pulsa DESCARGAR, aguanta la barra de progreso (a la mitad puede cortarse y toca pulsar REANUDAR) y cierra las ventanas emergentes con su botón CERRAR.\n\n" + \
+	"CONTROLADORES: la PC trae tres secciones (NVIDIA, AMD e Intel) y un marcador grande de cuántos llevas. Cada pastilla dice EN PENDRIVE o FALTA, y el pendrive tiene que estar metido en esta PC para instalar. En el nivel, una sección que dice FALTA significa que ese driver aún no se ha descargado en la PC de INTERNET.\n\n" + \
+	"SISTEMA OPERATIVO: con el pendrive metido en la PC se elige el sistema, se elige el idioma y se espera la instalación hasta el cartel verde final.\n\n" + \
+	"VIRUS: un marcador grande va diciendo en qué paso estás. Primero ANALIZA el disco y después arrastra cada archivo infectado hasta la CUARENTENA, sin tocar los buenos.\n\n" + \
 	"PROCESOS: el administrador de tareas con la PC infestada. La regla es una sola: termina SOLO los procesos con más del 50% de CPU. Si matas uno del sistema pierdes puntos, así que mira la columna de CPU antes de pulsar.\n\n" + \
-	"CAMBIAR DE SISTEMA: se confirma el borrado del sistema viejo y se instala el nuevo desde el pendrive.\n\n" + \
-	"ANUNCIOS: hay que desinstalar los programas de publicidad y dejar los útiles. Cuidado: el aviso de despedida tiene un botón grande que NO es el que desinstala."
+	"CAMBIAR DE SISTEMA: se confirma el borrado del sistema viejo y, con el pendrive metido en la PC, se instala el nuevo.\n\n" + \
+	"ANUNCIOS: se abren varias ventanas emergentes a la vez y hay que cerrarlas todas con su ✕. Cuidado: una ✕ es FALSA y en vez de cerrar abre OTRA ventana; y si acumulas 4 abiertas a la vez entra malware."
 
 # ------------------------------------------------------------------
 # Tipos de daño: al EXAMINAR se ven con un brillo distinto.
@@ -443,6 +444,14 @@ var hud: Node = null
 # INTERNET y las demás PCs comprueban si les falta algo.
 var pendrive: Array[String] = []
 
+# En qué PC está ENCHUFADO el pendrive (0 = en el bolsillo, sin meter).
+# Sin enchufarlo en esa PC no se puede ni bajar ni instalar nada: hay
+# que meterlo con el botón de la ventana de esa PC.
+var pendrive_pc := 0
+
+# Minijuegos que exigen tener el pendrive metido en la PC abierta.
+const USB_KINDS := ["download", "drivers", "os_install", "os_swap"]
+
 var tutorial_active := false:
 	set(value):
 		tutorial_active = value
@@ -477,6 +486,33 @@ func pendrive_names() -> String:
 	for id in pendrive:
 		out.append(str(SW_ITEMS.get(id, {}).get("short", id)))
 	return ", ".join(out)
+
+# ¿Este minijuego necesita el pendrive dentro de la PC?
+func usb_needed(kind: String) -> bool:
+	return kind in USB_KINDS
+
+# ¿Está el pendrive enchufado EN esa PC? (0 = minijuego montado a mano:
+# los tests lo tratan como si ya estuviera metido.)
+func pendrive_in(pc_id: int) -> bool:
+	return pendrive_pc == pc_id
+
+# Meter el pendrive en una PC. Si estaba en otra, sale solo de ahí
+# (así nunca se queda trabado a medias en ningún sitio).
+func pendrive_plug(pc_id: int) -> bool:
+	if pc_id == 0 or pendrive_pc == pc_id:
+		return false
+	pendrive_pc = pc_id
+	return true
+
+# Sacarlo de la PC (queda en el bolsillo hasta que se meta en otra).
+func pendrive_unplug() -> void:
+	pendrive_pc = 0
+
+# Rótulo corto de dónde está: "metido en la PC 2" o "en el bolsillo".
+func pendrive_slot_text() -> String:
+	if pendrive_pc <= 0:
+		return "NO ESTA EN NINGUNA PC"
+	return "METIDO EN LA PC %d" % pendrive_pc
 
 func _process(delta: float) -> void:
 	if state != State.PLAYING or tutorial_mode:
@@ -633,13 +669,13 @@ const MECHANIC_TUTORIAL_TEXT := {
 
 # Texto de los tutoriales del mundo de software (uno por minijuego).
 const SOFTWARE_TUTORIAL_TEXT := {
-	"download": "Entrarás a una habitación sin cronómetro con la PC de internet. Se abre el NAVEGADOR con el centro de descargas y una sola descarga pendiente: pulsa el botón correcto, espera la barra de progreso (a la mitad puede cortarse la conexión y tendrás que pulsar REANUDAR) y cierra las ventanas emergentes con su botón CERRAR antes de que se acumulen. En esta práctica no hay anuncios falsos y el archivo que bajes se guarda solo en el pendrive.",
-	"drivers": "Entrarás a una habitación sin cronómetro con una PC que no reconoce su hardware. Se abre la ventana de CONTROLADORES con tres secciones de fabricante (NVIDIA, AMD e Intel) y el pendrive ya cargado con los dos drivers de la práctica. Pulsa INSTALAR en cada sección y verás cómo cada una pasa a INSTALADO. En el nivel real, una sección que dice FALTA significa que ese driver todavía no está en el pendrive y hay que subirse a la PC de INTERNET a bajarlo.",
-	"os_install": "Entrarás a una habitación sin cronómetro con una PC que no tiene sistema operativo. Se abre el instalador en tres pasos numerados: eliges el sistema que ya esté en el pendrive, eliges el idioma y el teclado, y pulsas INSTALAR. Verás la mini-animación de la instalación y, al terminar, el cartel verde de SISTEMA OPERATIVO INSTALADO.",
+	"download": "Entrarás a una habitación sin cronómetro con la PC de INTERNET. Primero pulsa INSERTAR PENDRIVE en la barra de arriba: sin el pendrive metido no se baja nada. Verás SOLO los archivos que piden las otras PCs, cada uno con su etiqueta «→ lo pide PC X». Pulsa DESCARGAR, espera la barra de progreso (a la mitad puede cortarse la conexión y tendrás que pulsar REANUDAR) y cierra las ventanas emergentes con su botón CERRAR. El archivo baja solo al pendrive.",
+	"drivers": "Entrarás a una habitación sin cronómetro con una PC que no reconoce su hardware. Primero pulsa INSERTAR PENDRIVE (el pendrive ya viene cargado con los dos drivers de la práctica). Verás un marcador grande con el paso en el que estás y tres secciones de fabricante (NVIDIA, AMD e Intel): pulsa INSTALAR en cada una y pasa a INSTALADO. En el nivel real, una sección que dice FALTA significa que ese driver todavía no está en el pendrive y hay que bajarlo en la PC de INTERNET.",
+	"os_install": "Entrarás a una habitación sin cronómetro con una PC que no tiene sistema operativo. Primero pulsa INSERTAR PENDRIVE (trae las imágenes de la práctica). El instalador va en tres pasos numerados: eliges el sistema que ya esté en el pendrive, eliges el idioma y el teclado, y pulsas INSTALAR. Verás la mini-animación de la instalación y, al terminar, el cartel verde de SISTEMA OPERATIVO INSTALADO.",
 	"virus": "Entrarás a una habitación sin cronómetro con una PC infectada. Primero pulsa ANALIZAR para que el antivirus revise los archivos y los marque; después arrastra cada archivo infectado hasta la CUARENTENA. En esta práctica son dos virus y no hay archivos buenos en medio, pero en el nivel los archivos limpios están ahí y arrastrarlos por error resta puntos.",
 	"processes": "Entrarás a una habitación sin cronómetro con una PC infestada. Se abre el ADMINISTRADOR DE TAREAS con la lista de procesos y su uso de CPU. La regla es una sola: termina SOLO los procesos que consumen más del 50% de CPU; los del sistema (baja CPU) déjalos correr. Si terminas uno del sistema pierdes puntos y la estabilidad de la PC baja. En esta práctica son dos procesos maliciosos y no hay procesos con nombre engañoso.",
-	"os_swap": "Entrarás a una habitación sin cronómetro con una PC que trae un sistema viejo. Primero marca la casilla de confirmación y pulsa DESINSTALAR para vaciar la partición; después, con el disco vacío, elige el sistema nuevo del pendrive, el idioma y pulsa INSTALAR hasta ver el cartel verde final.",
-	"ads": "Entrarás a una habitación sin cronómetro con una PC llena de programas de más. Hay que desinstalar solo los que estorban (barras de ofertas, buscadores y reproductores) y dejar los útiles. Fíjate bien en el aviso de despedida: el botón grande y verde es la trampa, el que desinstala de verdad es el pequeño.",
+	"os_swap": "Entrarás a una habitación sin cronómetro con una PC que trae un sistema viejo. Primero marca la casilla de confirmación y pulsa DESINSTALAR para vaciar la partición; después, con el disco vacío, pulsa INSERTAR PENDRIVE, elige el sistema nuevo, el idioma y pulsa INSTALAR hasta ver el cartel verde final.",
+	"ads": "Entrarás a una habitación sin cronómetro con una PC que se llena de ventanas emergentes de publicidad. Se abren varias a la vez y hay que cerrarlas todas con su botón ✕ CERRAR. Atención: una ✕ es FALSA y en vez de cerrar la ventana abre OTRA más; además, si llegas a tener 4 abiertas a la vez entra malware. Un marcador grande te dice cuántas llevas cerradas y cuántas quedan.",
 }
 
 # Ficha de la pieza en párrafos completos (para el menú de tutoriales).
@@ -670,19 +706,19 @@ func software_level_info_text() -> String:
 		"Una habitación con %d computadoras y un cronómetro de %d segundos. No hay estanterías ni papelera: no se cargan repuestos, se mueve el PENDRIVE que baja los archivos. Cada tarea resuelta suma %d puntos y devuelve %d segundos.\n\n" +
 		"[color=#ff6b8a][b]CÓMO JUGAR[/b][/color]\n" +
 		"[color=#19e6ff][b]1[/b][/color]\n" +
-		"   E sobre la PC [color=#19e6ff][b]INTERNET[/b][/color]: se abre el navegador. Baja los %d archivos que piden las otras PCs. Distingue los botones reales de los anuncios (los anuncios instalan malware y restan puntos), cierra las ventanas emergentes con su botón CERRAR y, si una descarga se corta, pulsa REANUDAR. Todo baja al pendrive.\n" +
+		"   E sobre la PC [color=#19e6ff][b]INTERNET[/b][/color]: pulsa [color=#ffb020][b]INSERTAR PENDRIVE[/b][/color] (sin él no baja nada) y se abre el navegador con SOLO los %d archivos que piden las otras PCs: cada fila lleva su etiqueta «lo pide PC X». Cierra las ventanas emergentes con su botón CERRAR y, si una descarga se corta, pulsa REANUDAR. Todo baja al pendrive.\n" +
 		"[color=#19e6ff][b]2[/b][/color]\n" +
-		"   E sobre la PC [color=#ff2e88][b]CONTROLADORES[/b][/color]: hay tres secciones (NVIDIA, AMD e Intel). Instala los que digan EN PENDRIVE; los que digan FALTA hay que volver a bajarlos en la PC de internet.\n" +
+		"   E sobre la PC [color=#ff2e88][b]CONTROLADORES[/b][/color]: mete el pendrive ahí y hay tres secciones (NVIDIA, AMD e Intel). Instala los que digan EN PENDRIVE; los que digan FALTA hay que volver a bajarlos en la PC de internet.\n" +
 		"[color=#19e6ff][b]3[/b][/color]\n" +
-		"   E sobre la PC [color=#19e6ff][b]SISTEMA OPERATIVO[/b][/color]: elige el sistema del pendrive, el idioma y pulsa INSTALAR hasta ver el cartel verde.\n" +
+		"   E sobre la PC [color=#19e6ff][b]SISTEMA OPERATIVO[/b][/color]: con el pendrive metido elige el sistema, el idioma y pulsa INSTALAR hasta ver el cartel verde.\n" +
 		"[color=#19e6ff][b]4[/b][/color]\n" +
 		"   E sobre la PC [color=#ff2e88][b]VIRUS[/b][/color]: pulsa ANALIZAR y arrastra los archivos infectados a la CUARENTENA sin tocar los buenos.\n" +
 		"[color=#19e6ff][b]5[/b][/color]\n" +
 		"   E sobre la PC [color=#19e6ff][b]PROCESOS[/b][/color]: termina SOLO los procesos con más del 50%% de CPU; los del sistema se quedan corriendo aunque su nombre dé desconfianza.\n" +
 		"[color=#19e6ff][b]6[/b][/color]\n" +
-		"   E sobre la PC [color=#ff2e88][b]CAMBIAR DE SISTEMA[/b][/color]: confirma el borrado del sistema viejo e instala el nuevo desde el pendrive.\n" +
+		"   E sobre la PC [color=#ff2e88][b]CAMBIAR DE SISTEMA[/b][/color]: confirma el borrado del sistema viejo e instala el nuevo con el pendrive metido en esa PC.\n" +
 		"[color=#19e6ff][b]7[/b][/color]\n" +
-		"   E sobre la PC [color=#19e6ff][b]ANUNCIOS[/b][/color]: desinstala los programas que estorban y deja los útiles. En el aviso de despedida el botón grande es la trampa.\n\n" +
+		"   E sobre la PC [color=#19e6ff][b]ANUNCIOS[/b][/color]: cierra TODAS las ventanas emergentes con su ✕. Cuidado: una ✕ es FALSA y abre otra ventana, y con 4 abiertas a la vez entra malware.\n\n" +
 		"[color=#3ce08a][b]Objetivo[/b][/color]: resolver las %d tareas antes de que el reloj llegue a cero.\n\n" +
 		"[color=#19e6ff][b]CONTROLES[/b][/color]\n" +
 		"WASD para moverte, el mouse para mirar, E para interactuar y ESC para pausar o cerrar la ventana. Todo este mundo se juega con el ratón."
@@ -781,6 +817,8 @@ func start_level(level_idx: int, section := 1) -> void:
 		pendrive.clear()
 	else:
 		_build_tasks()
+	# Y arranca fuera de todas las PCs (hay que meterlo a mano).
+	pendrive_pc = 0
 	repaired.clear()
 	score = 0
 	errors = 0
@@ -817,6 +855,8 @@ func start_tutorial(part_type: String) -> void:
 	else:
 		time_left = LEVELS[0].time
 		current_tasks = [_tutorial_task(tutorial_station_part())]
+	# En la práctica también hay que meter el pendrive a mano en la PC.
+	pendrive_pc = 0
 	repaired.clear()
 	score = 0
 	errors = 0

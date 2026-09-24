@@ -6,11 +6,14 @@ extends VBoxContainer
 
 signal finished
 
+# PC en la que está abierto este minijuego (sirve para el hueco USB).
+var pc_id := 0
 var state: Dictionary = {}
 var flow: OsFlow
 var items: Array = []
 
-func setup(new_state: Dictionary, task: Dictionary) -> void:
+func setup(new_state: Dictionary, task: Dictionary, new_pc_id := 0) -> void:
+	pc_id = new_pc_id
 	state = new_state if new_state != null else {}
 	items = SwUI.str_array(task.get("items", []))
 	if items.is_empty():
@@ -21,8 +24,12 @@ func setup(new_state: Dictionary, task: Dictionary) -> void:
 		"Instálale uno que ya esté en el pendrive."))
 	flow = OsFlow.new()
 	add_child(flow)
-	flow.setup(state, items)
+	flow.setup(state, items, pc_id)
 	flow.installed.connect(func() -> void: finished.emit())
+
+func refresh_usb() -> void:
+	if flow:
+		flow.refresh_usb()
 
 func _process(delta: float) -> void:
 	if flow:

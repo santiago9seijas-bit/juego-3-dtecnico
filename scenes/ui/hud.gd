@@ -35,6 +35,10 @@ var software_panel: PanelContainer
 var software_title: Label
 var software_symptom: Label
 var software_pendrive: Label
+# Fila del HUECO USB: botón para meter/sacar el pendrive en ESTA PC.
+var software_usb_row: HBoxContainer
+var software_usb_label: Label
+var software_usb_button: Button
 var software_content: VBoxContainer
 var software_status: Label
 var software_close: Button
@@ -52,6 +56,9 @@ var tut_intro_body: RichTextLabel
 var tut_intro_start: Button
 var tut_intro_back: Button
 var tut_intro_hint: Label
+# Cajas que se recolocan al abrir cada pantalla según el tamaño de ventana.
+var tut_intro_margin: MarginContainer
+var tut_complete_panel: Control
 var tut_complete: CenterContainer
 var tut_repeat_button: Button
 var tut_complete_exit: Button
@@ -60,6 +67,7 @@ var tut_complete_text: Label
 var _tut_part_shown := ""
 var _last_carried_text := ""
 var _last_pd_text := ""
+var _last_usb_text := ""
 var _last_timer_secs := -1
 var _last_score := -1
 var _last_errors := -1
@@ -432,10 +440,39 @@ func _build_software_ui() -> void:
 	software_pendrive.add_theme_color_override("font_color", UiStyle.CYAN_SOFT)
 	box.add_child(software_pendrive)
 
+	# HUECO USB: el pendrive hay que METERLO en la PC para que esta PC
+	# pueda bajar o instalar lo que necesita (y sacarlo para llevarlo a otra).
+	software_usb_row = HBoxContainer.new()
+	software_usb_row.name = "SoftwareUsb"
+	software_usb_row.add_theme_constant_override("separation", 12)
+	box.add_child(software_usb_row)
+
+	software_usb_label = Label.new()
+	software_usb_label.name = "SoftwareUsbLabel"
+	software_usb_label.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	software_usb_label.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
+	software_usb_label.add_theme_font_size_override("font_size", 15)
+	software_usb_row.add_child(software_usb_label)
+
+	software_usb_button = Button.new()
+	software_usb_button.name = "SoftwareUsbButton"
+	software_usb_button.custom_minimum_size = Vector2(250, 40)
+	software_usb_button.add_theme_font_size_override("font_size", 15)
+	software_usb_button.pressed.connect(_on_usb_pressed)
+	software_usb_row.add_child(software_usb_button)
+
 	software_content = VBoxContainer.new()
 	software_content.name = "SoftwareContent"
-	software_content.size_flags_vertical = Control.SIZE_EXPAND_FILL
-	box.add_child(software_content)
+	software_content.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	# El minijuego se desliza DENTRO de la ventana: nada se sale de la
+	# pantalla ni se queda cortado aunque la ventana sea pequeña.
+	var software_scroll := ScrollContainer.new()
+	software_scroll.name = "SoftwareScroll"
+	software_scroll.size_flags_vertical = Control.SIZE_EXPAND_FILL
+	software_scroll.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	software_scroll.horizontal_scroll_mode = ScrollContainer.SCROLL_MODE_DISABLED
+	box.add_child(software_scroll)
+	software_scroll.add_child(software_content)
 
 	software_status = Label.new()
 	software_status.name = "SoftwareStatus"
@@ -450,6 +487,10 @@ func _build_software_ui() -> void:
 func open_software(pc: Node) -> void:
 	if pc == null or software_panel == null:
 		return
+	# La ventana se ajusta al tamaño real de la pantalla: nunca más
+	# ancha ni más alta que la ventana que la contiene.
+	var vp: Vector2 = get_viewport().get_visible_rect().size
+	software_panel.custom_minimum_size = Vector2(minf(940.0, vp.x - 40.0), minf(580.0, vp.y - 40.0))
 	if pc.get("pc_id") != null and int(pc.pc_id) in Game.repaired:
 		return
 	_soft_pc = pc
@@ -463,6 +504,7 @@ func open_software(pc: Node) -> void:
 	software_title.add_theme_color_override("font_outline_color", Color(accent.r, accent.g, accent.b, 0.45))
 	software_symptom.text = "SÍNTOMA: %s" % str(pc.get("symptom"))
 	_last_pd_text = ""
+	_last_usb_text = ""
 	_refresh_software_pendrive()
 	_clear_software_content()
 	var cls: GDScript = MINIGAMES.get(kind, BrowserMinigame)
@@ -470,7 +512,12 @@ func open_software(pc: Node) -> void:
 	software_content.add_child(node)
 	# Estado por PC: cerrar la ventana no pierde descargas ni instalaciones.
 	var soft_state: Dictionary = pc.get("state") if pc.get("state") != null else {}
-	node.setup(soft_state, pc.get("task") if "task" in pc else {})
+	# El minijuego recibe además EN QUÉ PC está abierto: así el hueco USB
+	# solo deja bajar o instalar cuando el pendrive está metido allí.
+	var pc_number := 0
+	if pc.get("pc_id") != null:
+		pc_number = int(pc.pc_id)
+	node.setup(soft_state, pc.get("task") if "task" in pc else {}, pc_number)
 	node.finished.connect(_on_software_done)
 	software_status.text = "Resuelve la tarea para reparar esta PC. ESC la cierra sin perder el avance."
 	software_status.add_theme_color_override("font_color", UiStyle.TEXT_DIM)
@@ -526,6 +573,64 @@ func _refresh_software_pendrive() -> void:
 	_last_pd_text = text
 	software_pendrive.text = text
 	software_pendrive.add_theme_color_override("font_color", color)
+	_refresh_software_usb()
+
+# Botón del HUECO USB: meter el pendrive en esta PC (si estaba en otra
+# sale solo de ahí) o sacarlo para llevárselo a otra PC.
+func _on_usb_pressed() -> void:
+	if _soft_pc == null:
+		return
+	var pc_id := int(_soft_pc.get("pc_id"))
+	if Game.pendrive_in(pc_id):
+		Game.pendrive_unplug()
+		show_message("Pendrive sacado de la PC %d" % pc_id)
+	else:
+		Game.pendrive_plug(pc_id)
+		show_message("¡Pendrive metido en la PC %d!" % pc_id)
+	_last_pd_text = ""
+	_last_usb_text = ""
+	_refresh_software_pendrive()
+	# El minijuego repinta lo que depende del pendrive (pastillas,
+	# listas de sistemas…): aquí solo cambia el enchufe, no su contenido.
+	var kids: Array = software_content.get_children()
+	if not kids.is_empty() and kids[0].has_method("refresh_usb"):
+		kids[0].call("refresh_usb")
+
+# Estado del hueco USB: siempre visible en las PCs que exigen pendrive,
+# con el botón grande de INSERTAR cuando falta (nadie puede perderse eso).
+func _refresh_software_usb() -> void:
+	if software_usb_row == null or software_usb_label == null or _soft_pc == null:
+		return
+	var kind := str(_soft_pc.get("kind"))
+	software_usb_row.visible = Game.usb_needed(kind)
+	if not software_usb_row.visible:
+		return
+	var pc_id := int(_soft_pc.get("pc_id"))
+	var plugged := Game.pendrive_in(pc_id)
+	var text: String
+	var color: Color
+	var button_text: String
+	var button_color: Color
+	if plugged:
+		text = "HUECO USB · ✓ PENDRIVE METIDO EN ESTA PC — ya puedes descargar e instalar."
+		color = Color(0.3, 1.0, 0.5)
+		button_text = "SACAR PENDRIVE"
+		button_color = Color(0.55, 0.62, 0.7)
+	else:
+		var where := ""
+		if Game.pendrive_pc > 0:
+			where = " (está en la PC %d: sácalo de ahí)" % Game.pendrive_pc
+		text = "HUECO USB · ✗ EL PENDRIVE NO ESTÁ METIDO EN ESTA PC%s. Sin él no se baja ni se instala nada." % where
+		color = Color(1.0, 0.55, 0.2)
+		button_text = "INSERTAR PENDRIVE"
+		button_color = Color(1.0, 0.69, 0.13)
+	if text + str(button_text) != _last_usb_text:
+		_last_usb_text = text + str(button_text)
+		software_usb_label.text = text
+		software_usb_label.add_theme_color_override("font_color", color)
+		software_usb_button.text = button_text
+		software_usb_button.add_theme_color_override("font_color", button_color)
+		software_usb_button.add_theme_color_override("font_hover_color", button_color.lightened(0.3))
 
 func close_software() -> void:
 	if software_panel:
@@ -658,25 +763,45 @@ func _build_tutorial_ui() -> void:
 	_build_tutorial_complete()
 
 func _build_tutorial_intro() -> void:
-	var center := CenterContainer.new()
-	tut_intro.add_child(center)
-	center.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
+	# El panel ocupa la ventana con margen y NUNCA la desborda: el cuerpo
+	# se desliza dentro de un scroll y los botones quedan siempre a la vista.
+	var margin := MarginContainer.new()
+	margin.name = "IntroMargin"
+	tut_intro.add_child(margin)
+	margin.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
+	margin.add_theme_constant_override("margin_left", 24)
+	margin.add_theme_constant_override("margin_top", 18)
+	margin.add_theme_constant_override("margin_right", 24)
+	margin.add_theme_constant_override("margin_bottom", 18)
+	tut_intro_margin = margin
+
 	var box := VBoxContainer.new()
-	box.custom_minimum_size = Vector2(640, 0)
-	box.add_theme_constant_override("separation", 28)
-	center.add_child(box)
+	box.name = "IntroBox"
+	box.add_theme_constant_override("separation", 14)
+	margin.add_child(box)
 
 	tut_intro_title = Label.new()
 	tut_intro_title.name = "IntroTitle"
 	tut_intro_title.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
-	tut_intro_title.add_theme_font_size_override("font_size", 44)
+	tut_intro_title.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
+	tut_intro_title.add_theme_font_size_override("font_size", 34)
 	box.add_child(tut_intro_title)
+
+	# El cuerpo (QUE ES LO MÁS LARGO) vive dentro de un scroll: si no cabe,
+	# se desliza en vez de cortarse o de echar los botones de la ventana.
+	var scroll := ScrollContainer.new()
+	scroll.name = "IntroScroll"
+	scroll.size_flags_vertical = Control.SIZE_EXPAND_FILL
+	scroll.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	scroll.horizontal_scroll_mode = ScrollContainer.SCROLL_MODE_DISABLED
+	box.add_child(scroll)
 
 	tut_intro_body = RichTextLabel.new()
 	tut_intro_body.bbcode_enabled = true
-	tut_intro_body.custom_minimum_size = Vector2(640, 280)
+	tut_intro_body.fit_content = true
+	tut_intro_body.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 	tut_intro_body.add_theme_font_size_override("font_size", 17)
-	box.add_child(tut_intro_body)
+	scroll.add_child(tut_intro_body)
 
 	var hint := Label.new()
 	tut_intro_hint = hint
@@ -686,7 +811,9 @@ func _build_tutorial_intro() -> void:
 	hint.add_theme_font_size_override("font_size", 15)
 	box.add_child(hint)
 
+	# LA NAVEGACIÓN FUERA DEL SCROLL: EMPEZAR y VOLVER se ven siempre.
 	var nav := HBoxContainer.new()
+	nav.name = "IntroNav"
 	nav.alignment = BoxContainer.ALIGNMENT_CENTER
 	nav.add_theme_constant_override("separation", 24)
 	box.add_child(nav)
@@ -715,42 +842,64 @@ func _build_tutorial_complete() -> void:
 	var panel := HoloCard.new()
 	panel.custom_minimum_size = Vector2(520, 0)
 	tut_complete.add_child(panel)
+	tut_complete_panel = panel
 
 	var box := VBoxContainer.new()
-	box.add_theme_constant_override("separation", 28)
+	box.add_theme_constant_override("separation", 24)
 	panel.add_child(box)
 
 	var title := Label.new()
 	title.name = "CompleteTitle"
 	title.text = "TUTORIAL TERMINADO"
 	title.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+	title.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
 	title.add_theme_font_size_override("font_size", 30)
 	box.add_child(title)
 
 	tut_complete_text = Label.new()
 	tut_complete_text.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
 	tut_complete_text.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
-	tut_complete_text.custom_minimum_size = Vector2(460, 0)
+	tut_complete_text.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 	box.add_child(tut_complete_text)
 
-	var nav := HBoxContainer.new()
+	# Los botones van APILADOS (uno debajo del otro): así nunca se pasan
+	# del ancho de la ventana y siguen estando siempre completos a la vista.
+	var nav := VBoxContainer.new()
+	nav.name = "CompleteNav"
 	nav.alignment = BoxContainer.ALIGNMENT_CENTER
-	nav.add_theme_constant_override("separation", 24)
+	nav.add_theme_constant_override("separation", 14)
 	box.add_child(nav)
 
 	tut_repeat_button = Button.new()
 	tut_repeat_button.text = "VOLVER A JUGAR"
-	tut_repeat_button.custom_minimum_size = Vector2(300, 52)
+	tut_repeat_button.custom_minimum_size = Vector2(420, 52)
 	tut_repeat_button.add_theme_font_size_override("font_size", 20)
 	tut_repeat_button.pressed.connect(_repeat_tutorial)
 	nav.add_child(tut_repeat_button)
 
 	tut_complete_exit = Button.new()
-	tut_complete_exit.text = "REGRESAR AL MENÚ DE SELECCIÓN DE NIVEL"
-	tut_complete_exit.custom_minimum_size = Vector2(500, 52)
+	tut_complete_exit.text = "VOLVER AL MENÚ DE NIVELES"
+	tut_complete_exit.custom_minimum_size = Vector2(420, 52)
 	tut_complete_exit.add_theme_font_size_override("font_size", 18)
 	tut_complete_exit.pressed.connect(_exit_tutorial)
 	nav.add_child(tut_complete_exit)
+
+# Ajusta las dos pantallas de tutorial al tamaño REAL de la ventana: el
+# ancho del texto se adapta y, si la ventana es estrecha, los botones se
+# encogen con ella. Se recalcula cada vez que una pantalla se enseña.
+func _fit_tutorial_screens() -> void:
+	var vp: Vector2 = get_viewport().get_visible_rect().size
+	if tut_intro_margin:
+		var intro_w := minf(780.0, vp.x - 48.0)
+		var side := maxi(16, int((vp.x - intro_w) * 0.5))
+		tut_intro_margin.add_theme_constant_override("margin_left", side)
+		tut_intro_margin.add_theme_constant_override("margin_right", side)
+	if tut_complete_panel:
+		var card_w := minf(560.0, vp.x - 40.0)
+		tut_complete_panel.custom_minimum_size = Vector2(card_w, 0)
+		var btn_w := maxf(220.0, minf(440.0, vp.x - 96.0))
+		tut_repeat_button.custom_minimum_size = Vector2(btn_w, 52)
+		tut_complete_exit.custom_minimum_size = Vector2(btn_w, 52)
 
 func _update_tutorial_ui() -> void:
 	var on := Game.tutorial_mode
@@ -772,6 +921,7 @@ func _update_tutorial_ui() -> void:
 func _show_tutorial_intro() -> void:
 	Game.tutorial_active = true
 	tut_complete.visible = false
+	_fit_tutorial_screens()
 	tut_intro_title.text = "TUTORIAL: %s" % Game.PART_TITLES.get(Game.tutorial_part, "").to_upper()
 	tut_intro_body.text = Game.part_info_text(Game.tutorial_part)
 	if Game.tutorial_part in Game.SOFTWARE_TUTORIALS:
@@ -803,6 +953,7 @@ func _on_tutorial_finished() -> void:
 	# La pantalla de "tutorial terminado" queda sola, sin la PC encima.
 	close_minigame()
 	close_software()
+	_fit_tutorial_screens()
 	tut_complete_text.text = "Completaste el tutorial de %s. Practica de nuevo o vuelve al menú." % title
 	tut_complete.visible = true
 	UiStyle.fade_in(tut_complete)

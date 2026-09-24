@@ -13,22 +13,30 @@ const PILL_OK := Color(0.3, 1, 0.5)
 const PILL_DECK := Color(0.49, 0.98, 1.0)
 const PILL_MISSING := Color(1, 0.4, 0.4)
 
+# PC en la que está abierto este minijuego (sirve para el hueco USB).
+var pc_id := 0
 var state: Dictionary = {}
 var items: Array = []
 var _rows := {}
 var _status: Label
+# Estado GRANDE: cuántos drivers llevan instalados en esta PC.
+var _stage: Label
 var _emitted := false
 
-func setup(new_state: Dictionary, task: Dictionary) -> void:
+func setup(new_state: Dictionary, task: Dictionary, new_pc_id := 0) -> void:
+	pc_id = new_pc_id
 	state = new_state if new_state != null else {}
 	items = SwUI.str_array(task.get("items", ["driver_nvidia", "driver_amd", "driver_intel"]))
 	add_theme_constant_override("separation", 8)
 
 	add_child(SwUI.section_header("Controladores de esta PC", UiStyle.CYAN))
+	# Estado grande: cuántos llevan instalados, siempre a la vista.
+	_stage = SwUI.label("", 19, UiStyle.MAGENTA)
+	add_child(_stage)
 	add_child(SwUI.steps([
-		{"n": 1, "text": "Mira las pastillas: FALTA significa que ese driver todavía no está en el pendrive."},
-		{"n": 2, "text": "Si alguno falta, ve a la PC de INTERNET, descárgalo y vuelve aquí."},
-		{"n": 3, "text": "Pulsa INSTALAR en cada sección que diga EN PENDRIVE."},
+		{"n": 1, "text": "MIRA LA PASTILLA de cada sección: FALTA significa que ese driver todavía no está en el pendrive."},
+		{"n": 2, "text": "SI ALGUNO FALTA: mete el pendrive en la PC de INTERNET, descárgalo ahí y vuelve con él."},
+		{"n": 3, "text": "PENDRIVE CONECTADO AQUÍ: pulsa INSTALAR en cada sección que diga EN PENDRIVE."},
 	]))
 	if Game.tutorial_mode:
 		add_child(SwUI.rich(
@@ -58,7 +66,7 @@ func setup(new_state: Dictionary, task: Dictionary) -> void:
 		_rows[id] = {"pill": pill, "bar": progress, "button": button}
 		add_child(row)
 
-	_status = SwUI.label("Empieza por la primera sección del fabricante.", 15, UiStyle.TEXT_DIM)
+	_status = SwUI.label("Empieza por la primera sección del fabricante.", 17, UiStyle.TEXT_DIM)
 	add_child(_status)
 	_refresh()
 	if _all_done():
@@ -68,8 +76,21 @@ func setup(new_state: Dictionary, task: Dictionary) -> void:
 func is_installed(id: String) -> bool:
 	return bool(state.get("installed", {}).get(id, false))
 
+# ¿Está el pendrive enchufado en esta PC? Sin él no se instala nada.
+func _usb_ok() -> bool:
+	return Game.pendrive_in(pc_id)
+
+# El jugador acaba de meter o sacar el pendrive: se repintan los botones.
+func refresh_usb() -> void:
+	_refresh()
+	if not _usb_ok() and not _all_done():
+		_set_status("✗ El pendrive NO está metido en esta PC: pulsa INSERTAR PENDRIVE (arriba).", Color(1, 0.45, 0.3))
+
 func _install(id: String) -> void:
 	if is_installed(id) or _emitted:
+		return
+	if not _usb_ok():
+		_set_status("✗ El pendrive NO está metido en esta PC: pulsa INSERTAR PENDRIVE (arriba).", Color(1, 0.45, 0.3))
 		return
 	if id not in Game.pendrive:
 		_set_status(
@@ -94,6 +115,7 @@ func _all_done() -> bool:
 	return true
 
 func _refresh() -> void:
+	var usb := _usb_ok()
 	for id in _rows:
 		var row: Dictionary = _rows[id]
 		var on_deck: bool = id in Game.pendrive
@@ -116,8 +138,36 @@ func _refresh() -> void:
 		pill_text.add_theme_color_override("font_color", color)
 		_style_pill(pill, color)
 		var button: Button = row.button
-		button.disabled = done or not on_deck
-		button.text = "INSTALADO ✓" if done else ("INSTALAR" if on_deck else "SIN DRIVER")
+		button.disabled = done or not on_deck or not usb
+		if done:
+			button.text = "INSTALADO ✓"
+		elif not usb:
+			# Sin el pendrive dentro de ESTA PC no hay nada que instalar.
+			button.text = "METE EL PENDRIVE"
+		elif on_deck:
+			button.text = "INSTALAR"
+		else:
+			button.text = "SIN DRIVER"
+	if not usb and not _all_done():
+		_set_status("✗ El pendrive NO está metido en esta PC: pulsa INSERTAR PENDRIVE (arriba).", Color(1, 0.45, 0.3))
+	_refresh_stage()
+
+func _refresh_stage() -> void:
+	if _stage == null:
+		return
+	var done := 0
+	for id in items:
+		if is_installed(id):
+			done += 1
+	if items.is_empty():
+		_stage.text = ""
+	elif done >= items.size():
+		_stage.text = "✔ TODOS LOS DRIVERS INSTALADOS · %d de %d" % [done, items.size()]
+		_stage.add_theme_color_override("font_color", Color(0.3, 1, 0.5))
+	else:
+		_stage.text = "PASO %d DE %d · DRIVERS INSTALADOS: %d  ·  FALTAN %d" % [
+			mini(done + 1, items.size()), items.size(), done, items.size() - done]
+		_stage.add_theme_color_override("font_color", UiStyle.MAGENTA)
 
 func _style_pill(pill: PanelContainer, color: Color) -> void:
 	var style := StyleBoxFlat.new()

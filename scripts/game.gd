@@ -450,7 +450,9 @@ var pendrive: Array[String] = []
 var pendrive_pc := 0
 
 # Minijuegos que exigen tener el pendrive metido en la PC abierta.
-const USB_KINDS := ["download", "drivers", "os_install", "os_swap"]
+# TODA PC de software exige el pendrive metido antes de empezar: es la
+# misma regla en las siete, así nunca se juega "a medias".
+const USB_KINDS := ["download", "drivers", "os_install", "os_swap", "virus", "processes", "ads"]
 
 var tutorial_active := false:
 	set(value):
@@ -487,7 +489,8 @@ func pendrive_names() -> String:
 		out.append(str(SW_ITEMS.get(id, {}).get("short", id)))
 	return ", ".join(out)
 
-# ¿Este minijuego necesita el pendrive dentro de la PC?
+# ¿Este minijuego necesita el pendrive dentro de la PC? (todas: sin él
+# no se empieza nada — el ordenador pide el pendrive antes de trabajar).
 func usb_needed(kind: String) -> bool:
 	return kind in USB_KINDS
 

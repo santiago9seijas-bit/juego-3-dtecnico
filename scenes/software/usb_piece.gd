@@ -20,13 +20,15 @@ var sub := ""
 var filled_id := ""
 var accept: Array = []
 var accent: Color = UiStyle.CYAN
+# Fichas que esta PC no pide: se ven, pero no se pueden arrastrar.
+var draggable := true
 
 var _title_label: Label
 var _sub_label: Label
 
 # Fábrica: item = lo que se arrastra, slot = hueco (filled_id = ya relleno).
 static func make(kind_: String, id: String, title_: String, sub_: String,
-		accent_: Color, accept_: Array = [], filled := "") -> UsbPiece:
+		accent_: Color, accept_: Array = [], filled := "", draggable_ := true) -> UsbPiece:
 	var piece := UsbPiece.new()
 	piece.kind = kind_
 	piece.piece_id = id
@@ -35,13 +37,15 @@ static func make(kind_: String, id: String, title_: String, sub_: String,
 	piece.accent = accent_
 	piece.accept = accept_
 	piece.filled_id = filled
+	piece.draggable = draggable_
 	piece._build()
 	return piece
 
 func _build() -> void:
 	name = "Usb_%s_%s" % [kind, piece_id]
 	mouse_filter = Control.MOUSE_FILTER_STOP
-	custom_minimum_size = Vector2(0, 52 if kind == "slot" else 46)
+	# Cajitas PEQUEÑAS: la página entera tiene que caber sin scrolls largos.
+	custom_minimum_size = Vector2(0, 46 if kind == "slot" else 40)
 
 	# Un PanelContainer mete a TODOS sus hijos en el mismo rectángulo, así
 	# que título y detalle van cada uno en su Label dentro de un VBox:
@@ -54,13 +58,13 @@ func _build() -> void:
 
 	_title_label = Label.new()
 	_title_label.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
-	_title_label.add_theme_font_size_override("font_size", 15)
+	_title_label.add_theme_font_size_override("font_size", 14)
 	_title_label.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	box.add_child(_title_label)
 
 	_sub_label = Label.new()
 	_sub_label.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
-	_sub_label.add_theme_font_size_override("font_size", 12)
+	_sub_label.add_theme_font_size_override("font_size", 11)
 	_sub_label.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	box.add_child(_sub_label)
 
@@ -96,6 +100,9 @@ func _paint() -> void:
 			_sub_label.text = sub
 			_title_label.add_theme_color_override("font_color", accent)
 			_sub_label.add_theme_color_override("font_color", UiStyle.TEXT_DIM)
+	# Ficha que esta PC no pide: se ve atenuada y no se arrastra.
+	if kind == "item" and not draggable and filled_id == "":
+		modulate = Color(1, 1, 1, 0.62)
 	var style := StyleBoxFlat.new()
 	style.bg_color = bg
 	style.set_border_width_all(2)
@@ -112,11 +119,11 @@ func _paint() -> void:
 # Arrastre
 # ------------------------------------------------------------------
 func _get_drag_data(_at: Vector2) -> Variant:
-	if kind != "item" or filled_id != "":
+	if kind != "item" or filled_id != "" or not draggable:
 		return null
 	var preview := Label.new()
 	preview.text = "  %s  " % _title_label.text
-	preview.add_theme_font_size_override("font_size", 15)
+	preview.add_theme_font_size_override("font_size", 14)
 	preview.add_theme_color_override("font_color", accent)
 	var pstyle := StyleBoxFlat.new()
 	pstyle.bg_color = Color("0a0f16")

@@ -154,20 +154,39 @@ func _setup_tutorial_room() -> void:
 const SW_ROOM_HALF := 7.0
 const SW_DESK_Z := -4.4
 const SW_DESK_GAP := 1.95
+# La PC de INTERNET (la fuente: de ahí bajan drivers y sistemas) va
+# DETRÁS de la fila, centrada y separada: se llega por los lados.
+const SW_INET_Z := -6.0
 
 func _setup_software_room() -> void:
 	_build_closed_room(SW_ROOM_HALF)
-	var n := Game.task_count
+	# La fila: todas MENOS la de internet (esa va detrás y aparte).
+	var row: Array = []
+	var inet: Dictionary = {}
+	for t: Dictionary in Game.current_tasks:
+		if str(t.get("kind", "")) == "download" and inet.is_empty():
+			inet = t
+		else:
+			row.append(t)
+	var n := row.size()
 	var start := -float(n - 1) * SW_DESK_GAP * 0.5
 	for i in n:
 		var pos := Vector3(start + float(i) * SW_DESK_GAP, 0.0, SW_DESK_Z)
 		_spawn_desk(pos)
-		level_root.add_child(_make_software_pc(Game.current_tasks[i], pos))
-	_spawn_room_sign("MUNDO 2 · PROBLEMAS DE SOFTWARE", Vector3(0.0, 2.75, -(SW_ROOM_HALF - 0.3)))
+		level_root.add_child(_make_software_pc(row[i], pos))
+	if not inet.is_empty():
+		var inet_pos := Vector3(0.0, 0.0, SW_INET_Z)
+		_spawn_desk(inet_pos)
+		level_root.add_child(_make_software_pc(inet, inet_pos))
+	# Los dos rótulos van uno a cada LADO y arriba del todo, en su propia
+	# banda: el centro lo ocupa el rótulo de la PC de INTERNET de detrás y
+	# por debajo quedan libres los rótulos de la fila.
+	_spawn_room_sign("MUNDO 2 · PROBLEMAS DE SOFTWARE",
+		Vector3(-4.4, 3.1, -(SW_ROOM_HALF - 0.3)), 46)
 	# Regla de la casa, a la vista en cuanto entras: el pendrive es lo que
 	# une las siete PCs (se baja en INTERNET y se instala en las demás).
 	_spawn_room_sign("PENDRIVE: baja en INTERNET y llévalo a las otras PCs",
-		Vector3(0.0, 2.28, -(SW_ROOM_HALF - 0.3)), 34, Color(1.0, 0.69, 0.13))
+		Vector3(4.35, 3.1, -(SW_ROOM_HALF - 0.3)), 32, Color(1.0, 0.69, 0.13))
 	_spawn_wall_screens()
 	player.position = LEVEL_SPAWN
 	player.velocity = Vector3.ZERO
@@ -204,11 +223,11 @@ func _spawn_room_sign(text: String, pos: Vector3, size := 54, color := Color(0.1
 	label.position = pos
 	level_root.add_child(label)
 
-# Pantallas encendidas en la pared norte, para que la sala se vea de taller.
-# La sala de software mide 14 de ancho, así que van CUATRO: dos a cada lado
-# del rótulo central (que ocupa x ≈ -2.2 … +2.2).
+# Pantallas encendidas, para que la sala se vea de taller. Van en la
+# pared SUR (detrás del punto de entrada): en la norte ya están los dos
+# rótulos, uno a cada lado, y el centro lo ocupa la PC de INTERNET.
 func _spawn_wall_screens() -> void:
-	var wall_z := -(SW_ROOM_HALF - 0.28)
+	var wall_z := SW_ROOM_HALF - 0.28
 	for x: float in [-5.7, -3.4, 3.4, 5.7]:
 		var mesh := BoxMesh.new()
 		mesh.size = Vector3(2.2, 1.2, 0.06)

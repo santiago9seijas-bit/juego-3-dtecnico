@@ -228,6 +228,22 @@ func _requester_label(id: String) -> String:
 		return "→ lo pide %s · %s" % [pcs[0], tipo]
 	return "→ lo piden %s · %s" % [", ".join(pcs), tipo]
 
+# "PC 3" (o "PC 3, PC 6"): qué PCs piden este archivo. Lo usa la pestaña
+# PENDRIVE para el título de cada hueco.
+func _requester_pcs(id: String) -> String:
+	var pcs: Array = []
+	for t in Game.current_tasks:
+		if str(t.get("kind", "")) == "download":
+			continue
+		if id not in SwUI.str_array(t.get("items", [])):
+			continue
+		pcs.append("PC %d" % int(t.get("id", 0)))
+	if pcs.is_empty():
+		return "OTRAS PCS"
+	if pcs.size() == 1:
+		return str(pcs[0])
+	return ", ".join(pcs)
+
 # Contador vivo: cuántos archivos siguen sin bajar.
 func _refresh_counter() -> void:
 	if _counter == null:
@@ -397,9 +413,12 @@ func usb_spec() -> Dictionary:
 	var slots := []
 	for id in requested:
 		var info: Dictionary = Game.SW_ITEMS.get(id, {})
+		var who := _requester_pcs(id)
 		slots.append({
 			"id": "slot_%s" % id,
-			"title": _requester_label(id).trim_prefix("→ ").to_upper(),
+			# La sección (controladores / sistemas) la anuncia la cabecera
+			# de la columna: aquí solo va QUIÉN pide este archivo.
+			"title": ("LO PIDE %s" if who.find(",") < 0 else "LO PIDEN %s") % who,
 			"hint": "%s · %s" % [info.get("file", id), info.get("size", "")],
 			"accept": [id],
 		})

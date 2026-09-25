@@ -49,13 +49,22 @@ var software_tab_usb: Button
 var software_page_error: VBoxContainer
 var software_page_usb: VBoxContainer
 var software_usb_title: Label
+# Cabecera de la pestaña: cuántos archivos lleva el pendrive.
+var software_usb_count: Label
+# Columna izquierda: inventario (lo que ya llevas dentro del pendrive).
+var software_usb_inv: VBoxContainer
 var software_usb_items: VBoxContainer
 var software_usb_slots: VBoxContainer
 var software_usb_head_left: Label
+var software_usb_head_mid: Label
 var software_usb_head_right: Label
 var software_usb_extra: VBoxContainer
 var software_usb_install: Button
 var software_usb_status: Label
+# El minijuego y el aviso de "mételo antes de empezar": uno tapa al otro.
+var software_scroll: ScrollContainer
+var software_block: PanelContainer
+var software_block_body: Label
 var _soft_tab := "error"
 var _soft_pc: Node = null
 # Corta señales duplicadas: si un minijuego emite `finished` dos veces
@@ -382,6 +391,16 @@ func close_all_menus() -> void:
 		close_minigame()
 	Game.is_minigame_open = false
 
+# Al abrir una PC se cierran LOS DEMÁS menús (menos la propia ventana):
+# así nunca queda nada montado encima de la pantalla que se está usando.
+func _close_other_menus() -> void:
+	if removal_panel and removal_panel.visible:
+		_on_removal_cancel()
+	if picker and picker.visible:
+		close_picker()
+	if minigame and minigame.visible:
+		close_minigame()
+
 # ------------------------------------------------------------------
 # MUNDO DE SOFTWARE: ventana con el navegador o el administrador de
 # tareas. Se construye una sola vez y recibe un minijuego por tarea.
@@ -501,12 +520,43 @@ func _build_software_ui() -> void:
 	software_usb_button.pressed.connect(_on_usb_pressed)
 	software_usb_row.add_child(software_usb_button)
 
+	# AVISO DE BLOQUEO: en TODA PC hay que meter el pendrive antes de
+	# empezar. Mientras no esté metido, este cartel ocupa el sitio del
+	# minijuego (con su botón INSERTAR grande, para no perderse).
+	software_block = PanelContainer.new()
+	software_block.name = "SoftwareBlock"
+	software_block.visible = false
+	var block_style := StyleBoxFlat.new()
+	block_style.bg_color = Color(0.14, 0.08, 0.02, 0.96)
+	block_style.set_border_width_all(2)
+	block_style.border_color = Color(1.0, 0.69, 0.13)
+	block_style.set_corner_radius_all(8)
+	block_style.content_margin_left = 18.0
+	block_style.content_margin_right = 18.0
+	block_style.content_margin_top = 14.0
+	block_style.content_margin_bottom = 16.0
+	software_block.add_theme_stylebox_override("panel", block_style)
+	software_page_error.add_child(software_block)
+	var block_box := VBoxContainer.new()
+	block_box.name = "Box"
+	block_box.add_theme_constant_override("separation", 8)
+	software_block.add_child(block_box)
+	var block_title := SwUI.label("PENDRIVE NO METIDO EN ESTA PC", 20, Color(1.0, 0.69, 0.13))
+	block_title.autowrap_mode = TextServer.AUTOWRAP_OFF
+	block_box.add_child(block_title)
+	software_block_body = SwUI.label("", 15, UiStyle.TEXT_DIM)
+	block_box.add_child(software_block_body)
+	var block_button := SwUI.button("INSERTAR PENDRIVE", Vector2(280, 46), 17)
+	block_button.name = "SoftwareBlockButton"
+	block_button.pressed.connect(_on_usb_pressed)
+	block_box.add_child(block_button)
+
 	software_content = VBoxContainer.new()
 	software_content.name = "SoftwareContent"
 	software_content.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 	# El minijuego se desliza DENTRO de la ventana: nada se sale de la
 	# pantalla ni se queda cortado aunque la ventana sea pequeña.
-	var software_scroll := ScrollContainer.new()
+	software_scroll = ScrollContainer.new()
 	software_scroll.name = "SoftwareScroll"
 	software_scroll.size_flags_vertical = Control.SIZE_EXPAND_FILL
 	software_scroll.size_flags_horizontal = Control.SIZE_EXPAND_FILL
@@ -538,8 +588,12 @@ func _software_tab_button(group: ButtonGroup, text: String, color: Color) -> But
 	b.pressed.connect(func() -> void: _show_software_tab("error" if b == software_tab_error else "usb"))
 	return b
 
-# Construye la pestaña 2: pendrive a la IZQUIERDA, huecos de esta PC a la
-# DERECHA y el botón INSTALAR debajo. Se repinta entera cuando cambia algo.
+# Construye la pestaña 2 en TRES cajitas pequeñas (no un cuadro enorme):
+#   · izquierda → TU PENDRIVE: lo que ya llevas dentro (solo lectura).
+#   · centro    → PARA ARRASTRAR: lo que sirve aquí, por secciones.
+#   · derecha   → LO QUE PIDE ESTA PC: los huecos, por secciones.
+# Debajo, el pie con el aviso y el botón grande. Se repinta entera cuando
+# cambia algo.
 func _build_software_usb_page(parent: VBoxContainer) -> void:
 	software_page_usb = VBoxContainer.new()
 	software_page_usb.name = "PageUsb"
@@ -548,14 +602,28 @@ func _build_software_usb_page(parent: VBoxContainer) -> void:
 	software_page_usb.visible = false
 	parent.add_child(software_page_usb)
 
+	# Cabecera: de qué va la página + cuántos archivos lleva el pendrive.
+	var head := HBoxContainer.new()
+	head.name = "UsbHead"
+	head.add_theme_constant_override("separation", 10)
+	software_page_usb.add_child(head)
+
 	software_usb_title = Label.new()
 	software_usb_title.name = "UsbTitle"
+	software_usb_title.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	software_usb_title.autowrap_mode = TextServer.AUTOWRAP_OFF
 	software_usb_title.add_theme_font_size_override("font_size", 17)
-	software_usb_title.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
 	software_usb_title.add_theme_color_override("font_color", UiStyle.CYAN_SOFT)
-	software_page_usb.add_child(software_usb_title)
+	head.add_child(software_usb_title)
 
-	# Las dos columnas van dentro de un scroll para que la ventana nunca
+	software_usb_count = Label.new()
+	software_usb_count.name = "UsbCount"
+	software_usb_count.autowrap_mode = TextServer.AUTOWRAP_OFF
+	software_usb_count.add_theme_font_size_override("font_size", 13)
+	software_usb_count.add_theme_color_override("font_color", UiStyle.TEXT_DIM)
+	head.add_child(software_usb_count)
+
+	# Las tres columnas van dentro de un scroll para que la ventana nunca
 	# crezca más de la pantalla aunque el pendrive venga lleno.
 	var scroll := ScrollContainer.new()
 	scroll.name = "UsbScroll"
@@ -569,23 +637,32 @@ func _build_software_usb_page(parent: VBoxContainer) -> void:
 	columns.name = "UsbColumns"
 	columns.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 	columns.size_flags_vertical = Control.SIZE_EXPAND_FILL
-	columns.add_theme_constant_override("separation", 14)
+	columns.add_theme_constant_override("separation", 10)
 	scroll.add_child(columns)
 
-	var left := _usb_column(columns, "Pendrive", "EN EL PENDRIVE", UiStyle.CYAN)
+	# 1 · el inventario: ancho fijo y SOLO se lee (de ahí no se arrastra).
+	var left := _usb_column(columns, "Inventario", "TU PENDRIVE", UiStyle.CYAN, 190.0, false)
 	software_usb_head_left = left.get_child(0) as Label
+	software_usb_inv = VBoxContainer.new()
+	software_usb_inv.name = "UsbInventory"
+	software_usb_inv.add_theme_constant_override("separation", 5)
+	left.add_child(software_usb_inv)
+
+	# 2 · lo que se puede arrastrar: aquí es donde sale el cuadro de
+	# arrastre al meter el pendrive, agrupado por secciones.
+	var mid := _usb_column(columns, "Origen", "PARA ARRASTRAR", UiStyle.CYAN_SOFT, 0.0, true)
+	software_usb_head_mid = mid.get_child(0) as Label
 	software_usb_items = VBoxContainer.new()
 	software_usb_items.name = "UsbItems"
-	software_usb_items.size_flags_vertical = Control.SIZE_EXPAND_FILL
-	software_usb_items.add_theme_constant_override("separation", 7)
-	left.add_child(software_usb_items)
+	software_usb_items.add_theme_constant_override("separation", 5)
+	mid.add_child(software_usb_items)
 
-	var right := _usb_column(columns, "Huecos", "LO QUE PIDE ESTA PC", UiStyle.MAGENTA)
+	# 3 · los huecos que pide esta PC, también por secciones.
+	var right := _usb_column(columns, "Huecos", "LO QUE PIDE ESTA PC", UiStyle.MAGENTA, 0.0, true)
 	software_usb_head_right = right.get_child(0) as Label
 	software_usb_slots = VBoxContainer.new()
 	software_usb_slots.name = "UsbSlots"
-	software_usb_slots.size_flags_vertical = Control.SIZE_EXPAND_FILL
-	software_usb_slots.add_theme_constant_override("separation", 7)
+	software_usb_slots.add_theme_constant_override("separation", 5)
 	right.add_child(software_usb_slots)
 
 	# Zona extra: aquí el minijuego puede meter sus propios controles
@@ -595,35 +672,52 @@ func _build_software_usb_page(parent: VBoxContainer) -> void:
 	software_usb_extra.add_theme_constant_override("separation", 7)
 	software_page_usb.add_child(software_usb_extra)
 
-	software_usb_install = Button.new()
-	software_usb_install.name = "UsbInstall"
-	software_usb_install.text = "INSTALAR"
-	software_usb_install.custom_minimum_size = Vector2(0, 46)
-	software_usb_install.add_theme_font_size_override("font_size", 18)
-	software_usb_install.disabled = true
-	software_usb_install.pressed.connect(_on_usb_install)
-	software_page_usb.add_child(software_usb_install)
+	# Pie: el aviso a la izquierda (crece) y el botón grande a la derecha.
+	var foot := HBoxContainer.new()
+	foot.name = "UsbFoot"
+	foot.add_theme_constant_override("separation", 12)
+	software_page_usb.add_child(foot)
 
 	software_usb_status = Label.new()
 	software_usb_status.name = "UsbStatus"
+	software_usb_status.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 	software_usb_status.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
 	software_usb_status.add_theme_font_size_override("font_size", 14)
 	software_usb_status.add_theme_color_override("font_color", UiStyle.TEXT_DIM)
-	software_page_usb.add_child(software_usb_status)
+	foot.add_child(software_usb_status)
 
-# Títulos de las dos columnas: cada minijuego puede renombrarlas desde su
-# usb_spec() (por ejemplo el navegador: nada está aún "en el pendrive").
-func _set_usb_heads(left_text: String, right_text: String) -> void:
+	software_usb_install = Button.new()
+	software_usb_install.name = "UsbInstall"
+	software_usb_install.text = "INSTALAR"
+	software_usb_install.custom_minimum_size = Vector2(300, 46)
+	software_usb_install.add_theme_font_size_override("font_size", 18)
+	software_usb_install.disabled = true
+	software_usb_install.pressed.connect(_on_usb_install)
+	foot.add_child(software_usb_install)
+
+# Títulos de las tres columnas: cada minijuego puede renombrar las dos
+# de la derecha desde su usb_spec() (por ejemplo el navegador: nada está
+# aún "en el pendrive", todo está "descargado sin guardar").
+func _set_usb_heads(inv_text: String, source_text: String, slots_text: String) -> void:
 	if software_usb_head_left != null:
-		software_usb_head_left.text = left_text
+		software_usb_head_left.text = inv_text
+	if software_usb_head_mid != null:
+		software_usb_head_mid.text = source_text
 	if software_usb_head_right != null:
-		software_usb_head_right.text = right_text
+		software_usb_head_right.text = slots_text
 
-func _usb_column(parent: Container, key: String, title: String, color: Color) -> VBoxContainer:
+# Cajita con su título de color. Con min_width se fija la de la izquierda;
+# las otras (flex) se reparten el resto de la fila.
+func _usb_column(parent: Container, key: String, title: String, color: Color,
+		min_width := 0.0, flex := true) -> VBoxContainer:
 	var panel := PanelContainer.new()
 	panel.name = "UsbCol_%s" % key
 	panel.size_flags_vertical = Control.SIZE_EXPAND_FILL
-	panel.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	if flex:
+		panel.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	else:
+		panel.size_flags_horizontal = Control.SIZE_FILL
+		panel.custom_minimum_size.x = min_width
 	var style := StyleBoxFlat.new()
 	style.bg_color = Color(0.04, 0.06, 0.09, 0.85)
 	style.set_border_width_all(1)
@@ -642,7 +736,8 @@ func _usb_column(parent: Container, key: String, title: String, color: Color) ->
 	panel.add_child(box)
 	var head := Label.new()
 	head.text = title
-	head.add_theme_font_size_override("font_size", 14)
+	head.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
+	head.add_theme_font_size_override("font_size", 13)
 	head.add_theme_color_override("font_color", color)
 	box.add_child(head)
 	return box
@@ -678,6 +773,7 @@ func _show_software_tab(which: String) -> void:
 func _clear_usb_page() -> void:
 	if software_usb_items == null:
 		return
+	_free_children(software_usb_inv)
 	_free_children(software_usb_items)
 	_free_children(software_usb_slots)
 	_free_children(software_usb_extra)
@@ -694,7 +790,8 @@ func _software_minigame() -> Node:
 		return null
 	return software_content.get_child(0)
 
-# Pinta la pestaña PENDRIVE: contenido a la izquierda, huecos a la derecha.
+# Pinta la pestaña PENDRIVE: inventario a la izquierda, en el centro lo
+# que se puede arrastrar (por secciones) y a la derecha los huecos.
 func _rebuild_usb_page() -> void:
 	if software_usb_items == null or _soft_pc == null:
 		return
@@ -702,51 +799,103 @@ func _rebuild_usb_page() -> void:
 	software_usb_status.text = ""
 	software_usb_status.add_theme_color_override("font_color", UiStyle.TEXT_DIM)
 
+	var accent: Color = SoftwarePC.KIND_COLORS.get(str(_soft_pc.get("kind")), UiStyle.CYAN)
+	software_usb_title.text = "PENDRIVE · %s" % Game.pendrive_names()
+	software_usb_title.add_theme_color_override("font_color", accent)
+	var total := Game.pendrive.size()
+	software_usb_count.text = "VACÍO" if total == 0 else "%d ARCHIVO%s" % [total, "" if total == 1 else "S"]
+	software_usb_count.add_theme_color_override("font_color",
+		Color(1.0, 0.69, 0.13) if total == 0 else UiStyle.CYAN_SOFT)
+	# La izquierda SIEMPRE enseña lo que llevas dentro del pendrive.
+	_fill_usb_inventory()
+
 	var mg := _software_minigame()
 	if mg == null or not mg.has_method("usb_spec"):
-		software_usb_title.text = "PENDRIVE · %s" % Game.pendrive_names()
-		_set_usb_heads("EN EL PENDRIVE", "LO QUE PIDE ESTA PC")
+		_set_usb_heads("TU PENDRIVE", "PARA ARRASTRAR", "LO QUE PIDE ESTA PC")
+		_usb_empty(software_usb_items,
+			"Esta PC no pide archivos: trabaja directamente en la pestaña EL ERROR.")
+		_usb_empty(software_usb_slots, "Aquí no se instala nada desde el pendrive.")
 		software_usb_install.disabled = true
 		software_usb_status.text = "Esta PC trabaja con lo que ya llevas en el pendrive."
 		return
 
 	var spec: Dictionary = mg.usb_spec()
-	_set_usb_heads(
-		str(spec.get("source_title", "EN EL PENDRIVE")),
+	_set_usb_heads("TU PENDRIVE",
+		str(spec.get("source_title", "PARA ARRASTRAR")),
 		str(spec.get("slots_title", "LO QUE PIDE ESTA PC")))
-	var accent: Color = SoftwarePC.KIND_COLORS.get(str(_soft_pc.get("kind")), UiStyle.CYAN)
-	software_usb_title.text = "PENDRIVE · %s" % Game.pendrive_names()
-	software_usb_title.add_theme_color_override("font_color", accent)
 	var drops: Dictionary = mg.usb_drops() if mg.has_method("usb_drops") else {}
+	var slots: Array = spec.get("slots", [])
 
-	# Izquierda: lo que se puede arrastrar.
-	var source: Array = spec.get("source", Game.pendrive)
-	var source_titles: Dictionary = spec.get("source_titles", {})
+	# Qué archivos pide esta PC (los demás se ven, pero no se arrastran).
+	var needed := {}
+	for raw_slot in slots:
+		var accept_pre: Array = (raw_slot as Dictionary).get("accept", [])
+		if accept_pre.is_empty():
+			needed["*"] = true
+		for id in accept_pre:
+			needed[str(id)] = true
+
+	# Centro: lo que se puede arrastrar, agrupado por secciones.
 	var placed := {}
 	for key in drops:
 		placed[str(drops[key])] = true
+	var source: Array = spec.get("source", Game.pendrive)
+	var source_titles: Dictionary = spec.get("source_titles", {})
+	var src := []
 	for raw_id in source:
 		var id := str(raw_id)
 		var info: Dictionary = Game.SW_ITEMS.get(id, {})
-		var title := str(source_titles.get(id, info.get("name", id)))
-		var sub := "%s · %s" % [info.get("file", ""), info.get("size", "")]
-		if placed.has(id):
-			sub = "ya colocado en un hueco"
-		software_usb_items.add_child(UsbPiece.make(
-			"item", id, title, sub, accent, [], id if placed.has(id) else ""))
+		src.append({
+			"id": id,
+			"title": str(source_titles.get(id, info.get("name", id))),
+			"sub": "%s · %s" % [info.get("file", ""), info.get("size", "")],
+			"placed": placed.has(id),
+			"for_this": needed.has("*") or needed.has(id),
+			"section": str(info.get("section", "")),
+		})
+	var any := false
+	for group: Dictionary in _group_by_section(src, accent):
+		if str(group.get("title", "")) != "":
+			_usb_section_head(software_usb_items, str(group["title"]), group.get("color", accent))
+		for raw_e in group.get("entries", []):
+			var e: Dictionary = raw_e
+			var is_placed := bool(e["placed"])
+			var can_drag := bool(e["for_this"])
+			var sub := str(e["sub"])
+			if is_placed:
+				sub = "ya colocado en un hueco"
+			elif not can_drag:
+				sub = "no lo pide esta PC"
+			software_usb_items.add_child(UsbPiece.make(
+				"item", str(e["id"]), str(e["title"]), sub, accent, [],
+				str(e["id"]) if is_placed else "", can_drag))
+			any = true
+	if not any:
+		_usb_empty(software_usb_items,
+			"Nada en el pendrive que sirva todavía: baja lo que pide esta PC en INTERNET.")
 
-	# Derecha: los huecos que pide esta PC.
-	var slots: Array = spec.get("slots", [])
+	# Derecha: los huecos que pide esta PC, agrupados por secciones.
+	var slot_entries := []
 	for raw_slot in slots:
 		var slot: Dictionary = raw_slot
-		var slot_id := str(slot.get("id", ""))
-		var filled := str(drops.get(slot_id, ""))
-		var accept_ids: Array = slot.get("accept", [])
-		var piece := UsbPiece.make(
-			"slot", slot_id, str(slot.get("title", "Hueco")),
-			str(slot.get("hint", "arrastra aquí el archivo")), accent, accept_ids, filled)
-		piece.dropped.connect(_on_usb_drop)
-		software_usb_slots.add_child(piece)
+		slot_entries.append({
+			"slot": slot,
+			"section": _section_of_accept(slot.get("accept", [])),
+		})
+	for group: Dictionary in _group_by_section(slot_entries, accent):
+		if str(group.get("title", "")) != "":
+			_usb_section_head(software_usb_slots, str(group["title"]), group.get("color", accent))
+		for raw_e in group.get("entries", []):
+			var entry: Dictionary = raw_e
+			var slot: Dictionary = entry["slot"]
+			var slot_id := str(slot.get("id", ""))
+			var filled := str(drops.get(slot_id, ""))
+			var accept_ids: Array = slot.get("accept", [])
+			var piece := UsbPiece.make(
+				"slot", slot_id, str(slot.get("title", "Hueco")),
+				str(slot.get("hint", "arrastra aquí el archivo")), accent, accept_ids, filled)
+			piece.dropped.connect(_on_usb_drop)
+			software_usb_slots.add_child(piece)
 
 	if mg.has_method("usb_build_extra"):
 		mg.usb_build_extra(software_usb_extra)
@@ -757,6 +906,93 @@ func _rebuild_usb_page() -> void:
 	if hint != "":
 		software_usb_status.text = hint
 		software_usb_status.add_theme_color_override("font_color", UiStyle.TEXT_DIM)
+
+# ------------------------------------------------------------------
+# Columna izquierda (inventario) y cabeceras de sección
+# ------------------------------------------------------------------
+# Lo que llevas DENTRO del pendrive: una línea por archivo, solo lectura.
+func _fill_usb_inventory() -> void:
+	if software_usb_inv == null:
+		return
+	if Game.pendrive.is_empty():
+		_usb_empty(software_usb_inv, "Vacío. Baja archivos en la PC de INTERNET y guárdalos aquí.")
+		return
+	for id: String in Game.pendrive:
+		var info: Dictionary = Game.SW_ITEMS.get(id, {})
+		var meta := _section_meta(str(info.get("section", "")))
+		var line := SwUI.label("%s\n%s" % [info.get("file", id), info.get("size", "")], 11, UiStyle.TEXT)
+		line.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
+		line.add_theme_color_override("font_color", meta.get("color", UiStyle.CYAN_SOFT))
+		software_usb_inv.add_child(line)
+
+# Título de sección en mayúsculas con su línea de color debajo.
+func _usb_section_head(parent: VBoxContainer, title: String, color: Color) -> void:
+	if title == "":
+		return
+	var box := VBoxContainer.new()
+	box.name = "UsbSection"
+	box.add_theme_constant_override("separation", 3)
+	var head := SwUI.label(title.to_upper(), 12, color)
+	head.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
+	box.add_child(head)
+	var line := ColorRect.new()
+	line.custom_minimum_size = Vector2(0, 2)
+	line.color = Color(color.r, color.g, color.b, 0.55)
+	line.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	box.add_child(line)
+	parent.add_child(box)
+
+# Mensaje de "no hay nada aquí" dentro de una columna.
+func _usb_empty(parent: VBoxContainer, text: String) -> void:
+	parent.add_child(SwUI.label(text, 12, UiStyle.TEXT_DIM))
+
+# Sección de un archivo (id de Game.SW_SECTIONS: "drivers" / "so").
+func _section_of(id: String) -> String:
+	return str(Game.SW_ITEMS.get(id, {}).get("section", ""))
+
+# La sección común a todos los ids que acepta un hueco ("" si mezclan).
+func _section_of_accept(accept: Array) -> String:
+	var found := ""
+	for id in accept:
+		var s := _section_of(str(id))
+		if found == "":
+			found = s
+		elif s != found:
+			return ""
+	return found
+
+# Título y color de una sección, para las cabeceras.
+func _section_meta(section_id: String) -> Dictionary:
+	if section_id == "":
+		return {}
+	for s: Dictionary in Game.SW_SECTIONS:
+		if str(s.get("id", "")) == section_id:
+			return {
+				"title": str(s.get("title", section_id)),
+				"color": Color.from_string("#%s" % str(s.get("color", "19e6ff")), UiStyle.CYAN),
+			}
+	return {"title": section_id, "color": UiStyle.CYAN}
+
+# Agrupa una lista de entradas por su "section", respetando su orden y
+# devolviendo también el título y el color de cada grupo.
+func _group_by_section(entries: Array, fallback_color: Color) -> Array:
+	var order: Array = []
+	var groups := {}
+	for e in entries:
+		var sid := str(e.get("section", ""))
+		if not groups.has(sid):
+			groups[sid] = []
+			order.append(sid)
+		groups[sid].append(e)
+	var out := []
+	for sid in order:
+		var meta := _section_meta(sid)
+		out.append({
+			"title": str(meta.get("title", "")),
+			"color": meta.get("color", fallback_color),
+			"entries": groups[sid],
+		})
+	return out
 
 # Arrastrar una ficha del pendrive a un hueco de esta PC.
 func _on_usb_drop(slot_id: String, item_id: String) -> void:
@@ -803,8 +1039,11 @@ func open_software(pc: Node) -> void:
 	# ancha ni más alta que la ventana que la contiene.
 	var vp: Vector2 = get_viewport().get_visible_rect().size
 	software_panel.custom_minimum_size = Vector2(minf(940.0, vp.x - 40.0), minf(580.0, vp.y - 40.0))
-	if pc.get("pc_id") != null and int(pc.pc_id) in Game.repaired:
-		return
+	# Se puede entrar en CUALQUIER PC en cualquier momento (también
+	# cuando ya está reparada o cuando ya se bajó todo lo de internet).
+	# Y al entrar se cierran LOS DEMÁS menús: en pantalla solo queda
+	# la ventana de esta PC.
+	_close_other_menus()
 	_soft_pc = pc
 	_soft_done = false
 	_soft_tab = "error"
@@ -941,6 +1180,17 @@ func _refresh_software_usb() -> void:
 		return
 	var pc_id := int(_soft_pc.get("pc_id"))
 	var plugged := Game.pendrive_in(pc_id)
+	# REGLA DE LAS SIETE PCs: sin el pendrive metido no se empieza nada.
+	# El aviso ocupa el sitio del minijuego hasta que lo enchufes.
+	if software_block != null:
+		software_block.visible = not plugged
+		if not plugged and software_block_body != null:
+			if Game.pendrive_pc > 0 and Game.pendrive_pc != pc_id:
+				software_block_body.text = "El pendrive está en la PC %d. Pulsa INSERTAR PENDRIVE: sale de ahí y entra en ESTA y la tarea ya puede empezar." % Game.pendrive_pc
+			else:
+				software_block_body.text = "Esta PC no trabaja sin él: mételo para empezar. Después se abre la pestaña PENDRIVE con sus cuadros."
+	if software_scroll != null:
+		software_scroll.visible = plugged
 	var text: String
 	var color: Color
 	var button_text: String
@@ -1007,8 +1257,11 @@ func _close_and_repair(pc: Node) -> void:
 	if Game.state != Game.State.PLAYING:
 		return
 	var id := int(pc.pc_id)
+	# Si la PC ya estaba reparada (se puede volver a entrar en cualquier
+	# PC), no se vuelve a anotar ni se repite el aviso.
+	var already := id in Game.repaired
 	Game.mark_repaired(id)
-	if not Game.tutorial_mode:
+	if not Game.tutorial_mode and not already:
 		show_message("¡PC %d reparada! +%d puntos" % [id, Game.POINTS_PER_TASK])
 
 func open_removal(part_type: String, on_done: Callable, reverse := false, mode := "") -> void:

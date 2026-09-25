@@ -132,7 +132,9 @@ func _build() -> void:
 	_label.outline_size = 10
 	_label.billboard = BaseMaterial3D.BILLBOARD_ENABLED
 	_label.modulate = accent
-	_label.position = Vector3(0, 0.95, 0)
+	# Un pelín más abajo: el rótulo queda pegado a su pantalla y deja
+	# arriba la banda de la pared para el título y la regla del pendrive.
+	_label.position = Vector3(0, 0.85, 0)
 	add_child(_label)
 	# La PC de DESCARGAS es la fuente de TODO: de ahí salen los drivers y
 	# las imágenes de sistema que luego se llevan en el pendrive. Se marca
@@ -140,7 +142,7 @@ func _build() -> void:
 	if kind == "download":
 		_label.text = "INTERNET\nDE AQUÍ SALEN DRIVERS Y SISTEMAS"
 		_label.font_size = 34
-		_label.position = Vector3(0, 1.12, 0)
+		_label.position = Vector3(0, 1.34, 0)
 		_label.vertical_alignment = VERTICAL_ALIGNMENT_CENTER
 
 	# Tira LED en el borde frontal del escritorio: da color a la estación
@@ -180,10 +182,10 @@ func _on_completed(pc_id: int) -> void:
 		_desk_led_mat.emission_energy_multiplier = 2.2
 		_desk_led_mat.albedo_color = Color(0.04, 0.19, 0.1)
 
+# Se puede entrar en CUALQUIER PC en cualquier momento, aunque ya esté
+# reparada: el jugador puede volver a internet a mirar o a bajar más.
 func interact(_player: Node3D) -> void:
 	super(_player)
-	if pc_id in Game.repaired:
-		return
 	if Game.hud:
 		Game.hud.open_software(self)
 

@@ -178,8 +178,8 @@ func _minijuegos() -> void:
 	hud._show_software_tab("usb")
 	_check(hud.software_page_usb.visible, "la pestaña PENDRIVE se puede abrir")
 	_check(not hud.software_page_error.visible, "…y la del error queda de fondo")
-	_check(hud.software_usb_items.get_child_count() == 5, "los 5 archivos descargados estan para arrastrar")
-	_check(hud.software_usb_slots.get_child_count() == 5, "y esta PC tiene 5 huecos, uno por archivo")
+	_check(_pieces(hud.software_usb_items) == 5, "los 5 archivos descargados estan para arrastrar")
+	_check(_pieces(hud.software_usb_slots) == 5, "y esta PC tiene 5 huecos, uno por archivo")
 	_check(hud.software_usb_install.text.contains("GUARDAR"), "su boton se llama GUARDAR EN EL PENDRIVE")
 	_check(hud.software_usb_install.disabled, "sin arrastrar nada, GUARDAR esta apagado")
 	_check(not hud.usb_drop("slot_%s" % first, "so_mac"), "un archivo NO va al hueco de otro")
@@ -200,6 +200,14 @@ func _minijuegos() -> void:
 	_check(hud.carried_label.text.contains("PCs reparadas: 1/7"),
 		"el rótulo de la mochila pasa a MARCADOR de la sala")
 	pc1.free()
+
+	# ---- Acceso libre: se puede volver a entrar en una PC ya reparada
+	var pc1_again := _pc(0)
+	hud.open_software(pc1_again)
+	_check(hud.software_panel.visible and _mg(hud) is BrowserMinigame,
+		"una PC YA reparada se vuelve a abrir sin problema")
+	hud.close_software()
+	pc1_again.free()
 
 	# ---- PC 2 · CONTROLADORES (por sección de fabricante) -----------
 	var pc2 := _pc(1)
@@ -223,8 +231,8 @@ func _minijuegos() -> void:
 	_check(not (drivers._rows["driver_nvidia"] as Dictionary).has("button"),
 		"el INSTALAR ya no vive en cada fila: se hace en la pestaña PENDRIVE")
 	hud._show_software_tab("usb")
-	_check(hud.software_usb_slots.get_child_count() == 3, "los controladores piden TRES huecos")
-	_check(hud.software_usb_items.get_child_count() == 5, "y el pendrive enseña sus 5 archivos")
+	_check(_pieces(hud.software_usb_slots) == 3, "los controladores piden TRES huecos")
+	_check(_pieces(hud.software_usb_items) == 5, "y el pendrive enseña sus 5 archivos")
 	_check(hud.software_usb_install.disabled, "sin arrastrar nada, INSTALAR esta apagado")
 	_check(not hud.usb_drop("slot_so_mac", "driver_nvidia"), "un driver NO va al hueco de un sistema")
 	_check(not hud.usb_drop("slot_driver_nvidia", "so_mac"), "ni al reves")
@@ -266,7 +274,7 @@ func _minijuegos() -> void:
 
 	# ---- Pestaña PENDRIVE: UN hueco para arrastrar el sistema ------
 	hud._show_software_tab("usb")
-	_check(hud.software_usb_slots.get_child_count() == 1, "la PC de sistema pide UN solo hueco")
+	_check(_pieces(hud.software_usb_slots) == 1, "la PC de sistema pide UN solo hueco")
 	_check(hud.software_usb_install.disabled, "sin el SO arrastrado, INSTALAR esta apagado")
 	_check(not hud.usb_drop("slot_so", "so_mac"), "un SO que NO esta en el pendrive no se arrastra")
 	flow._pick_os("so_mac")
@@ -374,7 +382,7 @@ func _minijuegos() -> void:
 	_check(swap.flow.visible, "y aparece el instalador del sistema nuevo")
 	# ---- Pestaña PENDRIVE: con el disco ya vacío, arrastrar e instalar
 	hud._show_software_tab("usb")
-	_check(hud.software_usb_slots.get_child_count() == 1, "cambia de sistema pide UN hueco para el SO nuevo")
+	_check(_pieces(hud.software_usb_slots) == 1, "cambia de sistema pide UN hueco para el SO nuevo")
 	_check(not swap.usb_ready(), "con el hueco vacío la pestaña no deja instalar")
 	_check(hud.software_usb_install.disabled, "…así que INSTALAR está apagado")
 	_check(hud.usb_drop("slot_so", "so_linux"), "con el disco vacio SI se arrastra hasta su hueco")
@@ -403,7 +411,15 @@ func _minijuegos() -> void:
 	if ads == null:
 		hud.free()
 		return
-	_check(hud.software_usb_row.visible == false, "esta PC NO exige el pendrive")
+	_check(hud.software_usb_row.visible, "ahora TODAS las PCs exigen el pendrive metido")
+	_check(hud.software_block.visible,
+		"sin el pendrive, un aviso ocupa el sitio del minijuego")
+	_check(hud.software_scroll.visible == false, "…y el minijuego empieza APAGADO")
+	Game.pendrive_plug(7)
+	await get_tree().process_frame
+	await get_tree().process_frame
+	_check(hud.software_block.visible == false, "al meter el pendrive el aviso se va solo")
+	_check(hud.software_scroll.visible, "y el minijuego se ve para empezar")
 	_check(ads.count == 3, "el nivel pide cerrar 3 ventanas de anuncios")
 	_check(ads._open.size() == 3, "y las tres se abren a la vez")
 	_check(_steps_of(ads) != null, "con sus pasos 1, 2 y 3 apilados")
@@ -587,23 +603,41 @@ func _sala() -> void:
 		if child is SoftwarePC:
 			pcs.append(child)
 	_check(pcs.size() == 7, "la sala construye LAS SIETE PCs")
-	pcs.sort_custom(func(a, b) -> bool: return (a as Node3D).position.x < (b as Node3D).position.x)
-	for i in pcs.size():
-		var pos: Vector3 = (pcs[i] as Node3D).position
-		_check(pcs[i].pc_id == i + 1, "la PC %d ocupa su sitio en la fila" % (i + 1))
-		_check(pcs[i].kind == EXPECTED[i], "la PC %d abre %s" % [i + 1, EXPECTED[i]])
-		_check(is_equal_approx(pos.z, -4.4), "la PC %d esta pegada a la pared" % (i + 1))
-		_check(pcs[i].task is Dictionary and pcs[i].task.get("kind", "") == EXPECTED[i],
-			"la PC %d guarda su tarea" % (i + 1))
+
+	# La PC de INTERNET va DETRÁS de la fila, centrada y aparte: es la
+	# fuente de la que bajan los drivers y los sistemas.
+	var inet: Node3D = null
+	var row: Array = []
+	for p in pcs:
+		if str(p.kind) == "download":
+			inet = p
+		else:
+			row.append(p)
+	_check(inet != null, "la PC de INTERNET va DETRAS de las demas")
+	row.sort_custom(func(a, b) -> bool: return (a as Node3D).position.x < (b as Node3D).position.x)
+	_check(row.size() == 6, "y las otras seis forman la fila")
+	if inet != null:
+		_check(is_equal_approx(inet.position.x, 0.0), "la PC de INTERNET queda en el centro")
+		_check(is_equal_approx(inet.position.z, -6.0), "…mas atras que la fila, separada de ella")
+		_check(inet.task is Dictionary and inet.task.get("kind", "") == "download",
+			"la PC de INTERNET guarda su tarea")
+	for i in row.size():
+		var pos: Vector3 = (row[i] as Node3D).position
+		_check(row[i].pc_id == i + 2, "la PC %d ocupa su sitio en la fila" % (i + 2))
+		_check(row[i].kind == EXPECTED[i + 1], "la PC %d abre %s" % [i + 2, EXPECTED[i + 1]])
+		_check(is_equal_approx(pos.z, -4.4), "la PC %d esta pegada a la pared" % (i + 2))
+		_check(row[i].task is Dictionary and row[i].task.get("kind", "") == EXPECTED[i + 1],
+			"la PC %d guarda su tarea" % (i + 2))
 		if i > 0:
-			var gap: float = pos.x - (pcs[i - 1] as Node3D).position.x
-			_check(is_equal_approx(gap, 1.95), "la PC %d respeta el paso de la fila" % (i + 1))
-	_check(is_equal_approx((pcs[3] as Node3D).position.x, 0.0), "la fila queda centrada en la sala")
+			var gap: float = pos.x - (row[i - 1] as Node3D).position.x
+			_check(is_equal_approx(gap, 1.95), "la PC %d respeta el paso de la fila" % (i + 2))
+	_check(is_equal_approx((row[2] as Node3D).position.x, -(row[3] as Node3D).position.x),
+		"la fila queda centrada en la sala")
 
 	# El jugador camina, mira cada PC y la abre con E (flujo real de juego).
 	var pl: Node3D = main.get_node("Player")
 	var hud: Node = main.get_node("HUD")
-	await _aim_at(pl, pcs[0])
+	await _aim_at(pl, _pc_by_id(pcs, 1))
 	_check(pl.current_interactable is SoftwarePC and pl.current_interactable.pc_id == 1, "la mira alcanza la PC 1 (INTERNET)")
 	pl._try_interact()
 	_check(hud.software_panel.visible, "la tecla E abre la ventana de la PC 1")
@@ -612,13 +646,13 @@ func _sala() -> void:
 	hud.close_software()
 	_check(Game.is_minigame_open == false, "al cerrar vuelve el control al jugador")
 
-	await _aim_at(pl, pcs[3])
+	await _aim_at(pl, _pc_by_id(pcs, 4))
 	_check(pl.current_interactable is SoftwarePC and pl.current_interactable.pc_id == 4, "la mira alcanza la PC 4 (VIRUS)")
 	pl._try_interact()
 	_check(hud.software_content.get_child(0) is VirusMinigame, "la PC 4 abre el ANTIVIRUS")
 	hud.close_software()
 
-	await _aim_at(pl, pcs[6])
+	await _aim_at(pl, _pc_by_id(pcs, 7))
 	_check(pl.current_interactable is SoftwarePC and pl.current_interactable.pc_id == 7, "la mira alcanza la PC 7 (ANUNCIOS)")
 	pl._try_interact()
 	_check(hud.software_content.get_child(0) is AdsMinigame, "la PC 7 abre el DESINSTALADOR")
@@ -699,6 +733,22 @@ func _mg(hud: Node) -> Node:
 	if hud.software_content.get_child_count() == 0:
 		return null
 	return hud.software_content.get_child(0)
+
+# Cuántas FICHAS (UsbPiece) hay en una columna de la pestaña PENDRIVE:
+# las cabeceras de sección también son hijos, pero no son fichas.
+func _pieces(parent: Node) -> int:
+	var n := 0
+	for child in parent.get_children():
+		if child is UsbPiece:
+			n += 1
+	return n
+
+# La PC con ese número en la sala (o null).
+func _pc_by_id(pcs: Array, pc_id: int) -> Node3D:
+	for p in pcs:
+		if int(p.pc_id) == pc_id:
+			return p
+	return null
 
 # Coloca al jugador delante del objetivo y lo hace mirarlo de lleno.
 func _aim_at(pl: Node3D, target: Node3D) -> void:

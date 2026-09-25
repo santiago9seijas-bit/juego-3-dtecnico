@@ -94,6 +94,8 @@ const PART_TITLES := {
 	"processes": "Procesos del Sistema",
 	"os_swap": "Cambiar de Sistema",
 	"ads": "Anuncios",
+	"server_setup": "CONFIGURACIÓN DEL SERVIDOR",
+	"liquid": "REFRIGERACIÓN LÍQUIDA",
 }
 
 const PART_VARIANTS := {
@@ -132,6 +134,10 @@ const PART_VARIANTS := {
 		{"name": "Fancooler de disipador", "type": "fan"},
 		{"name": "Fancooler RGB 140mm", "type": "fan"},
 	],
+	"liquid": [
+		{"name": "Kit líquido de práctica", "type": "liquid"},
+		{"name": "Kit líquido de reserva", "type": "liquid"},
+	],
 }
 
 const SECTION_NAMES := [
@@ -146,17 +152,16 @@ const SECTION_INFO := [
 	"Recorrerás la sala de servicio, examinarás cada computadora averiada, tomarás el repuesto correcto de la estantería y lo instalarás en el slot dañado. Juegas contra el reloj: cada reparación suma puntos y te devuelve unos segundos de tiempo.\n\n" +
 	"Está disponible en modo tutorial, sin prisa y sin penalizaciones, y en modo nivel con cronómetro para poner a prueba lo aprendido.",
 	"Instalación de sistemas operativos, controladores, limpieza de virus y optimización del equipo.\n\n" +
-	"Mundo de SOFTWARE: una sala con SIETE computadoras y ningún repuesto que cargar. El técnico mueve un PENDRIVE: hay que METERLO en la PC de INTERNET (botón INSERTAR PENDRIVE) para bajar los drivers (NVIDIA, AMD, Intel) y las imágenes de los sistemas, y después llevarlo a las demás PCs.\n\n" +
-	"Cada PC enseña un minijuego: bajar solo lo que piden las otras PCs, instalar controladores por secciones de fabricante, instalar un sistema operativo (idioma y animación final), limpiar virus, terminar procesos, cambiar un sistema por otro y cerrar las ventanas emergentes de publicidad.\n\n" +
-	"Un solo nivel contra el cronómetro (7 tareas) y tutoriales propios para practicar cada minijuego sin prisa.",
-	"Montaje y mantenimiento de servidores: red, almacenamiento, usuarios y copias de seguridad.\n\n" +
-	"[color=#6f8ba0]Sección bloqueada: se habilitará más adelante.[/color]",
+	"Mundo de SOFTWARE: una sala con SIETE minijuegos y ningún repuesto que cargar. El técnico mueve un PENDRIVE: hay que METERLO en la PC de INTERNET para bajar los drivers y las imágenes de los sistemas, y después llevarlo a las demás PCs. Las limpiezas de procesos y anuncios pueden hacerse con o sin USB; el pendrive aparece en una tarjeta aparte.\n\n" +
+	"Está dividido en seis niveles: los dos primeros practican minijuegos básicos, los dos siguientes combinan tareas más difíciles y los dos últimos juntan las siete PCs. Hay tutoriales independientes para practicar cada minijuego sin prisa.",
+	"Montaje y mantenimiento de servidores: placa base, fuente, procesador, memoria ROM, memoria ECC y refrigeración líquida.\n\n" +
+	"Prueba el armado completo en una sala rectangular: busca cada componente en las cajas y llénalos en una única torre de servidor. Al terminar, configura la PC con cables, puertos y una secuencia de programación.",
 ]
 
 const TUTORIALS_MENU_TEXT := \
 	"Una habitación, una sola computadora y lo que quieres aprender: sin cronómetro, sin puntaje y sin penalizaciones.\n\n" + \
 	"Al entrar verás para qué sirve la pieza o la herramienta y qué pasa cuando falla. Después practicas el paso completo: examinar, sacar, instalar o soldar. Puedes repetirlo las veces que quieras hasta que te salga de memoria.\n\n" + \
-	"Hay un tutorial para cada una de las siete piezas (RAM, disco duro, fuente, gráfica, placa madre, procesador y fancooler) y tres más para las mecánicas del taller: voltímetro, cautín con soldadura y papelera."
+	"Hay un tutorial para cada una de las siete piezas (RAM, disco duro, fuente, gráfica, placa madre, procesador y fancooler) y cuatro más para las mecánicas del taller: voltímetro, cautín con soldadura, papelera y tuberías de refrigeración líquida."
 
 # Ficha corta de cada pieza: para que sirve y que descompone la PC si falla.
 const PART_INFO := {
@@ -187,6 +192,10 @@ const PART_INFO := {
 	"fan": {
 		"use": "Enfría el procesador y la carcasa disipando el calor que generan los componentes.",
 		"fails": "Sobrecalentamiento, la PC se pone lenta por protección, hace mucho ruido y puede apagarse.",
+	},
+	"liquid": {
+		"use": "Un circuito cerrado con bomba, tubos y refrigerante que lleva el calor de la CPU al radiador.",
+		"fails": "Si una tubería está cruzada o el líquido no circula, la CPU se sobrecalienta y el servidor se apaga.",
 	},
 	# Fichas de las mecánicas (tutoriales que no son de una pieza).
 	"volt": {
@@ -244,37 +253,89 @@ const BOARD_PARTS := ["psu", "mb"]
 #   5-6: todas las piezas y mecánicas en una sala mediana, 5 PCs,
 #        cajas en fila y la papelera al frente de los escritorios.
 const LEVELS := [
-	{"pc_count": 3, "time": 120.0, "parts": BASIC_PARTS, "room": "small"},
-	{"pc_count": 3, "time": 160.0, "parts": BASIC_PARTS, "room": "small"},
-	{"pc_count": 4, "time": 190.0, "parts": BOARD_PARTS, "room": "small", "volt": true, "solder": true},
-	{"pc_count": 4, "time": 230.0, "parts": BOARD_PARTS, "room": "small", "volt": true, "solder": true},
-	{"pc_count": 5, "time": 270.0, "parts": ALL_PARTS, "room": "medium", "volt": true, "solder": true},
-	{"pc_count": 5, "time": 330.0, "parts": ALL_PARTS, "room": "medium", "volt": true, "solder": true},
+	{"pc_count": 3, "time": 120.0, "parts": BASIC_PARTS, "room": "small", "stage": "BÁSICOS", "title": "MEMORIA Y DISCO"},
+	{"pc_count": 3, "time": 160.0, "parts": BASIC_PARTS, "room": "small", "stage": "BÁSICOS", "title": "REPARACIÓN BÁSICA"},
+	{"pc_count": 4, "time": 190.0, "parts": BOARD_PARTS, "room": "small", "volt": true, "solder": true, "stage": "AVANZADOS", "title": "PLACAS Y FUENTES"},
+	{"pc_count": 4, "time": 230.0, "parts": BOARD_PARTS, "room": "small", "volt": true, "solder": true, "stage": "AVANZADOS", "title": "MECÁNICAS TÉCNICAS"},
+	{"pc_count": 5, "time": 270.0, "parts": ALL_PARTS, "room": "medium", "volt": true, "solder": true, "stage": "TODO JUNTO", "title": "TALLER COMPLETO"},
+	{"pc_count": 5, "time": 330.0, "parts": ALL_PARTS, "room": "medium", "volt": true, "solder": true, "stage": "TODO JUNTO", "title": "RETO FINAL"},
 ]
 
 # ------------------------------------------------------------------
 # SECCIÓN 2 · MUNDO DE SOFTWARE (la sección siguiente a la de hardware).
-# Una habitación grande con SIETE computadoras y SIN estanterías ni
-# papelera: aquí no se cargan repuestos, se mueve un PENDRIVE.
-#   1. INTERNET  → navegador para bajar SOLO lo que piden las otras PCs
-#                  (etiqueta «lo pide PC X» + ventanas emergentes).
-#                  Exige el pendrive METERIDO en esa PC.
-#   2. DRIVERS   → instalar los drivers del pendrive por SECCIÓN de
-#                  fabricante (NVIDIA / AMD / Intel); si alguno dice
-#                  FALTA hay que volver a la PC de internet.
-#   3. SISTEMA   → instalar un sistema operativo: idioma + mini
-#                  animación final de "SISTEMA INSTALADO".
-#   4. VIRUS     → analizar el disco y arrastrar los infectados a la
-#                  cuarentena sin tocar los archivos buenos.
-#   5. PROCESOS  → administrador de tareas: terminar solo CPU > 50%.
-#   6. CAMBIAR   → desinstalar el sistema viejo y poner otro nuevo.
-#   7. ANUNCIOS  → cerrar ventanas emergentes sin caer en la ✕ FALSA.
-# De momento es UN solo nivel con esas siete tareas.
+# La misma progresión de seis niveles del taller, adaptada a los minijuegos:
+#   1-2: prácticas básicas y minijuegos sin complicación.
+#   3-4: tareas combinadas y más difíciles.
+#   5-6: las siete PCs y todos los minijuegos juntos.
+# Cada nivel indica qué tipos de PC aparecen en su lista `kinds`.
 # ------------------------------------------------------------------
 const SECTION_SOFTWARE := 2
 const SOFTWARE_LEVELS := [
-	{"pc_count": 7, "time": 420.0, "room": "software"},
+	{"pc_count": 2, "time": 150.0, "room": "software", "stage": "BÁSICOS", "title": "LIMPIEZA BÁSICA", "kinds": ["ads", "processes"]},
+	{"pc_count": 2, "time": 180.0, "room": "software", "stage": "BÁSICOS", "title": "VIRUS Y ANUNCIOS", "kinds": ["virus", "ads"]},
+	{"pc_count": 2, "time": 240.0, "room": "software", "stage": "AVANZADOS", "title": "INTERNET Y CONTROLADORES", "kinds": ["download", "drivers"]},
+	{"pc_count": 3, "time": 300.0, "room": "software", "stage": "AVANZADOS", "title": "SISTEMAS Y CAMBIOS", "kinds": ["download", "os_install", "os_swap"]},
+	{"pc_count": 7, "time": 420.0, "room": "software", "stage": "TODO JUNTO", "title": "TODO JUNTO", "kinds": ["download", "drivers", "os_install", "virus", "processes", "os_swap", "ads"]},
+	{"pc_count": 7, "time": 480.0, "room": "software", "stage": "TODO JUNTO", "title": "RETO FINAL", "kinds": ["download", "drivers", "os_install", "virus", "processes", "os_swap", "ads"]},
 ]
+
+# ------------------------------------------------------------------
+# SECCIÓN 3 · MUNDO DE SERVIDORES (un nivel de prueba).
+# Se reutilizan las mecánicas del taller, pero las piezas tienen nombres
+# de servidor y la sala es rectangular. Al terminar el armado aparece
+# una PC de configuración directa para cables, puertos y programación.
+# ------------------------------------------------------------------
+const SECTION_SERVER := 3
+const SERVER_LEVELS := [
+	{"pc_count": 6, "time": 540.0, "room": "server", "parts": SERVER_PARTS, "stage": "PRUEBA", "title": "ARMADO DEL SERVIDOR"},
+]
+# Orden obligatorio de armado: placa, fuente, CPU, ROM, RAM y refrigeración.
+const SERVER_PARTS := ["mb", "psu", "cpu", "hdd", "ram", "liquid"]
+const SERVER_PART_TITLES := {
+	"mb": "PLACA BASE SERVIDOR",
+	"psu": "FUENTE REDUNDANTE",
+	"cpu": "CPU DEL SERVIDOR",
+	"hdd": "MEMORIA ROM",
+	"ram": "MÓDULO DE MEMORIA ECC",
+	"liquid": "REFRIGERACIÓN LÍQUIDA",
+}
+const SERVER_PART_VARIANTS := {
+	"mb": [
+		{"name": "Placa base servidor X10", "type": "mb"},
+		{"name": "Placa base servidor X20", "type": "mb"},
+	],
+	"psu": [
+		{"name": "Fuente redundante 800W", "type": "psu"},
+		{"name": "Fuente redundante 1200W", "type": "psu"},
+	],
+	"cpu": [
+		{"name": "CPU servidor 24 núcleos", "type": "cpu"},
+		{"name": "CPU servidor 48 núcleos", "type": "cpu"},
+	],
+	"hdd": [
+		{"name": "Módulo ROM 1TB", "type": "hdd"},
+		{"name": "Módulo ROM 2TB", "type": "hdd"},
+	],
+	"ram": [
+		{"name": "Módulo RAM ECC 128GB", "type": "ram"},
+		{"name": "Módulo RAM ECC 256GB", "type": "ram"},
+		{"name": "Módulo RAM ECC 512GB", "type": "ram"},
+	],
+	"liquid": [
+		{"name": "Kit líquido 1200W", "type": "liquid"},
+		{"name": "Kit líquido 1600W", "type": "liquid"},
+	],
+}
+const SERVER_SYMPTOMS := {
+	"mb": "La placa base no reconoce la torre",
+	"psu": "La fuente redundante no enciende",
+	"cpu": "El servidor no arranca su CPU",
+	"hdd": "La memoria ROM no monta el sistema",
+	"ram": "El servidor no encuentra memoria ECC",
+	"liquid": "El servidor no tiene circuito de refrigeración líquida",
+}
+const SERVER_CONFIG_ID := 99
+const SERVER_PROGRAMS := ["Sistema Operativo del Servidor", "Servicios de Red", "Copias de Seguridad"]
 
 # Archivos del mundo de software: se bajan en la PC de INTERNET y viajan
 # en el PENDRIVE hacia las otras PCs. "section" agrupa la página de
@@ -324,14 +385,14 @@ const SOFTWARE_TUTORIAL_TASKS := {
 	"ads": {"items": [], "count": 2, "decoy": false, "prefill": []},
 }
 const SOFTWARE_TUTORIALS_MENU_TEXT := \
-	"Siete prácticas del mundo de software, cada una en su habitación y sin cronómetro, sin puntaje y sin penalizaciones.\n\n" + \
+	"Siete prácticas del mundo de software, cada una en su habitación y sin cronómetro, sin puntaje y sin penalizaciones. Después puedes usarlas en los seis niveles, que van de lo básico a todo junto.\n\n" + \
 	"DESCARGAS: se abre el navegador con SOLO los archivos que piden las otras PCs y cada fila lleva su etiqueta «→ lo pide PC X». Antes de bajar hay que meter el PENDRIVE en esa PC con su botón INSERTAR. Después pulsa DESCARGAR, aguanta la barra de progreso (a la mitad puede cortarse y toca pulsar REANUDAR) y cierra las ventanas emergentes con su botón CERRAR. Lo bajado se arrastra en la pestaña PENDRIVE a su hueco y se guarda con GUARDAR EN EL PENDRIVE.\n\n" + \
 	"CONTROLADORES: la PC trae tres secciones (NVIDIA, AMD e Intel) y un marcador grande de cuántos llevas. Cada pastilla dice EN PENDRIVE o FALTA, y el pendrive tiene que estar metido en esta PC para instalar. En la pestaña PENDRIVE se arrastra cada driver al hueco de su sección y se pulsa INSTALAR. En el nivel, una sección que dice FALTA significa que ese driver aún no se ha descargado en la PC de INTERNET.\n\n" + \
 	"SISTEMA OPERATIVO: con el pendrive metido en la PC se abre la pestaña PENDRIVE, se arrastra el sistema a su hueco, se elige el idioma y se espera la instalación hasta el cartel verde final.\n\n" + \
 	"VIRUS: un marcador grande va diciendo en qué paso estás. Primero ANALIZA el disco y después arrastra cada archivo infectado hasta la CUARENTENA, sin tocar los buenos.\n\n" + \
-	"PROCESOS: el administrador de tareas con la PC infestada. La regla es una sola: termina SOLO los procesos con más del 50% de CPU. Si matas uno del sistema pierdes puntos, así que mira la columna de CPU antes de pulsar.\n\n" + \
+	"PROCESOS: el administrador de tareas con la PC infestada. La regla es una sola: termina SOLO los procesos con más del 50% de CPU. Si matas uno del sistema pierdes puntos, así que mira la columna de CPU antes de pulsar. Esta limpieza se puede hacer sin USB; el pendrive queda disponible como opción en su tarjeta.\n\n" + \
 	"CAMBIAR DE SISTEMA: se confirma el borrado del sistema viejo y, con el pendrive metido en la PC, el nuevo se arrastra en la pestaña PENDRIVE y se instala.\n\n" + \
-	"ANUNCIOS: se abren varias ventanas emergentes a la vez y hay que cerrarlas todas con su ✕. Cuidado: una ✕ es FALSA y en vez de cerrar abre OTRA ventana; y si acumulas 4 abiertas a la vez entra malware."
+	"ANUNCIOS: se abren varias ventanas emergentes a la vez y hay que cerrarlas todas con su ✕. Cuidado: una ✕ es FALSA y en vez de cerrar abre OTRA ventana; y si acumulas 4 abiertas a la vez entra malware. También se puede limpiar sin USB; el pendrive es opcional y aparece en una tarjeta aparte."
 
 # ------------------------------------------------------------------
 # Tipos de daño: al EXAMINAR se ven con un brillo distinto.
@@ -351,12 +412,12 @@ const FIX_SWAP := "swap"
 const VOLTAGE_PARTS := ["mb", "psu", "fan"]
 const BURN_PARTS := ["ram", "gpu", "cpu", "mb", "psu", "fan"]
 
-# Tres tutoriales de mecánica, además de los de cada pieza:
-#   volt → voltímetro, solder → cautín, trash → papelera.
-const MECHANIC_TUTORIALS := ["volt", "solder", "trash"]
-const MECHANIC_PART := {"volt": "mb", "solder": "fan", "trash": "ram"}
+# Tutoriales de mecánica, además de los de cada pieza:
+#   volt → voltímetro, solder → cautín, trash → papelera, liquid → tuberías.
+const MECHANIC_TUTORIALS := ["volt", "solder", "trash", "liquid"]
+const MECHANIC_PART := {"volt": "mb", "solder": "fan", "trash": "ram", "liquid": "liquid"}
 # Etiqueta corta de cada botón de mecánica (la fila es angosta).
-const MECHANIC_SHORT := {"volt": "VOLTMETRO", "solder": "CAUTÍN", "trash": "PAPELERA"}
+const MECHANIC_SHORT := {"volt": "VOLTMETRO", "solder": "CAUTÍN", "trash": "PAPELERA", "liquid": "TUBERÍAS"}
 
 func fault_for(part_type: String) -> String:
 	# Los fallos de voltaje/quemadura solo existen donde hay voltímetro y cautín.
@@ -415,10 +476,10 @@ const SINGLE_PROBLEMS := [
 
 var state: State = State.MENU
 var current_level := 1
-# Sección del menú en juego: 1 = reparación (hardware), 2 = software.
+# Sección del menú en juego: 1 = reparación, 2 = software, 3 = servidores.
 var current_section := 1
-# Las secciones 1 y 2 están habilitadas (la 3 de servidores sigue cerrada).
-var unlocked_levels := 2
+# Las tres secciones están habilitadas para el nivel de prueba de servidores.
+var unlocked_levels := 3
 var pc_count := 5
 var task_count := 5
 var repaired: Array[int] = []
@@ -445,14 +506,19 @@ var hud: Node = null
 var pendrive: Array[String] = []
 
 # En qué PC está ENCHUFADO el pendrive (0 = en el bolsillo, sin meter).
-# Sin enchufarlo en esa PC no se puede ni bajar ni instalar nada: hay
-# que meterlo con el botón de la ventana de esa PC.
+# Las tareas que lo necesitan bloquean sin él; procesos y anuncios también
+# pueden aceitarlo, pero lo muestran como una tarjeta opcional aparte.
 var pendrive_pc := 0
+var server_parts_ready := false
+var server_config_done := false
+# Tipos que ya están instalados dentro de la única torre del servidor.
+var server_installed_parts: Array[String] = []
 
 # Minijuegos que exigen tener el pendrive metido en la PC abierta.
-# TODA PC de software exige el pendrive metido antes de empezar: es la
-# misma regla en las siete, así nunca se juega "a medias".
-const USB_KINDS := ["download", "drivers", "os_install", "os_swap", "virus", "processes", "ads"]
+# El servidor NO usa pendrive: su configuración se hace directamente en la
+# PC con cables, puertos y programación.
+const USB_KINDS := ["download", "drivers", "os_install", "os_swap", "virus"]
+const SOFTWARE_USB_OPTIONAL := ["processes", "ads"]
 
 var tutorial_active := false:
 	set(value):
@@ -489,10 +555,13 @@ func pendrive_names() -> String:
 		out.append(str(SW_ITEMS.get(id, {}).get("short", id)))
 	return ", ".join(out)
 
-# ¿Este minijuego necesita el pendrive dentro de la PC? (todas: sin él
-# no se empieza nada — el ordenador pide el pendrive antes de trabajar).
+# ¿Este minijuego necesita el pendrive dentro de la PC? Los minijuegos
+# de software sí; la configuración del servidor trabaja directamente en la PC.
 func usb_needed(kind: String) -> bool:
 	return kind in USB_KINDS
+
+func usb_optional(kind: String) -> bool:
+	return kind in SOFTWARE_USB_OPTIONAL
 
 # ¿Está el pendrive enchufado EN esa PC? (0 = minijuego montado a mano:
 # los tests lo tratan como si ya estuviera metido.)
@@ -512,10 +581,16 @@ func pendrive_unplug() -> void:
 	pendrive_pc = 0
 
 # Rótulo corto de dónde está: "metido en la PC 2" o "en el bolsillo".
+# La PC de configuración del servidor muestra su nombre en vez de un ID.
 func pendrive_slot_text() -> String:
 	if pendrive_pc <= 0:
 		return "NO ESTA EN NINGUNA PC"
-	return "METIDO EN LA PC %d" % pendrive_pc
+	return "METIDO EN LA %s" % pc_display_name(pendrive_pc)
+
+func pc_display_name(pc_id: int) -> String:
+	if uses_server_room() and pc_id == SERVER_CONFIG_ID:
+		return "CONFIGURACIÓN DEL SERVIDOR"
+	return "PC %d" % pc_id
 
 func _process(delta: float) -> void:
 	if state != State.PLAYING or tutorial_mode:
@@ -528,10 +603,14 @@ func _process(delta: float) -> void:
 func examine_limit() -> int:
 	return [4, 3, 2][clampi(current_level - 1, 0, 2)]
 
-# Niveles de cada sección: la 1 tiene sus 6 niveles de hardware y la 2
-# (software) de momento solo uno, con siete tareas dentro.
+# Niveles de cada sección: hardware y software tienen seis niveles de
+# progresión; servidores tiene un único nivel de prueba.
 func levels_for(section: int) -> Array:
-	return SOFTWARE_LEVELS if section == SECTION_SOFTWARE else LEVELS
+	if section == SECTION_SOFTWARE:
+		return SOFTWARE_LEVELS
+	if section == SECTION_SERVER:
+		return SERVER_LEVELS
+	return LEVELS
 
 func _levels() -> Array:
 	return levels_for(current_section)
@@ -541,12 +620,44 @@ func _level(idx := -1) -> Dictionary:
 	var i := current_level if idx < 0 else idx
 	return arr[clampi(i - 1, 0, arr.size() - 1)]
 
+# Etiqueta de progresión que aparece en los botones de nivel y en su ficha.
+func level_stage_name(level_idx: int, section := 1) -> String:
+	var levels: Array = levels_for(section)
+	var idx := clampi(level_idx - 1, 0, maxi(levels.size() - 1, 0))
+	var stage := str(levels[idx].get("stage", ""))
+	if stage != "":
+		return stage
+	return "BÁSICOS" if idx < 2 else ("AVANZADOS" if idx < 4 else "TODO JUNTO")
+
+func level_title(level_idx: int, section := 1) -> String:
+	var levels: Array = levels_for(section)
+	var idx := clampi(level_idx - 1, 0, maxi(levels.size() - 1, 0))
+	return str(levels[idx].get("title", "NIVEL %d" % (idx + 1)))
+
 # Piezas que existen en este nivel: definen estanterías, slots y fallas.
 # El mundo de software no lleva repuestos: no hay ni estanterías ni papelera.
 func level_parts() -> Array:
 	if uses_software_room():
 		return []
+	if uses_server_room():
+		return SERVER_PARTS
 	return _level().get("parts", ALL_PARTS)
+
+func part_title(part_type: String) -> String:
+	if uses_server_room():
+		return str(SERVER_PART_TITLES.get(part_type, PART_TITLES.get(part_type, part_type)))
+	return str(PART_TITLES.get(part_type, part_type))
+
+func part_variants(part_type: String) -> Array:
+	if uses_server_room():
+		return SERVER_PART_VARIANTS.get(part_type, PART_VARIANTS.get(part_type, []))
+	return PART_VARIANTS.get(part_type, [])
+
+func part_default_name(part_type: String) -> String:
+	var variants: Array = part_variants(part_type)
+	if variants.is_empty():
+		return part_title(part_type)
+	return str(variants[0].get("name", part_title(part_type)))
 
 # Niveles 1-4: sala pequeña con todo cerca; 5-6: la sala mediana
 # (5 PCs en fila, cajas juntas y la papelera al frente de los escritorios).
@@ -556,14 +667,19 @@ func uses_small_room() -> bool:
 func uses_medium_room() -> bool:
 	return _level().get("room", "big") == "medium"
 
-# Mundo de software: la sala con las SIETE PCs (internet, drivers,
-# sistema, virus, procesos, cambiar sistema y anuncios).
+# Mundo de software: la sala tiene las PCs del nivel actual; los dos
+# últimos niveles vuelven a reunir las SIETE (internet, drivers, sistema,
+# virus, procesos, cambiar sistema y anuncios).
 func uses_software_room() -> bool:
 	return _level().get("room", "") == "software"
 
-# En los niveles con sala cerrada (pequeña, mediana o de software) no se ve el escenario.
+func uses_server_room() -> bool:
+	return _level().get("room", "") == "server"
+
+# En los niveles con sala cerrada (pequeña, mediana, software o servidor)
+# no se ve el escenario.
 func uses_closed_room() -> bool:
-	return uses_small_room() or uses_medium_room() or uses_software_room()
+	return uses_small_room() or uses_medium_room() or uses_software_room() or uses_server_room()
 
 func level_uses_volt() -> bool:
 	if tutorial_mode and tutorial_mechanic in ["volt", "solder"]:
@@ -585,8 +701,8 @@ func uses_tech(part_type: String) -> bool:
 func tutorial_station_part() -> String:
 	return MECHANIC_PART.get(tutorial_part, tutorial_part)
 
-# La papelera se usa en los niveles de hardware y en el tutorial de
-# papelera (en los demás tutoriales no hay piezas dañadas). En el mundo
+# La papelera se usa en los niveles de hardware/servidor y en el tutorial
+# de papelera (en los demás tutoriales no hay piezas dañadas). En el mundo
 # de software no hay nada que botar.
 func level_has_trash() -> bool:
 	if uses_software_room():
@@ -668,6 +784,7 @@ const MECHANIC_TUTORIAL_TEXT := {
 	"volt": "Entrarás a una sala sin cronómetro con una placa que sufrió una sobretensión: al examinarla el slot brilla en MORADO. Examina el slot, toma la placa de la caja y pasa la cadena completa: primero sueldas con el cautín, después atornillas y al final mides los rieles con el voltímetro hasta detener la aguja en la zona verde.",
 	"solder": "Entrarás a una sala sin cronómetro con un fancooler quemado: al examinarlo el slot brilla en NEGRO. No hace falta cambiarlo: examina el slot y pulsa SOLDAR para arrastrar la soldadura por toda la pista con el cautín hasta el final (pero cuidado: si te sales 3 veces la pieza se pierde). Si prefieres ir seguro, pulsa VOLTAJE, mides los rieles con el voltímetro y recién ahí sueldas: así un fallo no arruina la pieza.",
 	"trash": "Entrarás con la mochila ocupada: examina la PC, saca la pieza dañada (queda marcada como DAÑADA en el inventario) y llévala a la papelera para liberar espacio antes de instalar el repuesto bueno.",
+	"liquid": "Entrarás a una sala sin cronómetro con un cuadro de refrigeración vacío. Arrastra el kit para ver los bloques rojos de CPU, RAM, ROM, GPU, PSU y MB; coloca tuberías rectas, en L y en cruz, además de las piezas especiales que tienen la forma de CPU, RAM, ROM, GPU, PSU o MB. Pulsa GIRAR para cambiar la orientación de una pieza, quitarla con QUITAR ÚLTIMA o clic derecho, y cubrir algunos bloques directamente con rectas. Conecta todo desde IN hasta OUT, pulsa BOTAR LÍQUIDO y arrastra el recipiente al inicio. Cuando la barra llegue al 100%, enciende la bomba. En el servidor este minijuego aparece como la última pieza del armado.",
 }
 
 # Texto de los tutoriales del mundo de software (uno por minijuego).
@@ -700,46 +817,56 @@ func part_long_text(part_type: String) -> String:
 func level_time_total() -> float:
 	return float(_level().get("time", 120.0))
 
-# Ficha del nivel del mundo de software: 7 PCs y el pendrive.
+# Ficha del nivel del mundo de software: se adapta a sus 2, 3 o 7 PCs.
 # Los pasos van SIEMPRE numerados 1, 2, 3… con la explicación en la
 # línea de debajo (nunca todo seguido en la misma línea).
-func software_level_info_text() -> String:
+func software_level_info_text(level_idx := -1) -> String:
+	var idx := current_level if level_idx < 0 else level_idx
+	var safe_idx := clampi(idx - 1, 0, SOFTWARE_LEVELS.size() - 1)
+	var lvl: Dictionary = SOFTWARE_LEVELS[safe_idx]
+	var kinds: Array = lvl.get("kinds", SOFTWARE_TUTORIALS)
+	var steps := ""
+	for i in kinds.size():
+		var kind := str(kinds[i])
+		var how := str(SOFTWARE_TUTORIAL_TEXT.get(kind, "Resuelve el minijuego de esta PC con el ratón."))
+		steps += "[color=#19e6ff][b]%d[/b][/color]\n   PC %d · [b]%s[/b]\n   %s\n" % [
+			i + 1, i + 1, PART_TITLES.get(kind, kind), how
+		]
+	var usb_text := "No hay estanterías ni papelera: no se cargan repuestos. "
+	if "download" in kinds:
+		usb_text += "Usa el PENDRIVE de INTERNET para llevar los archivos que pidan las demás PCs."
+	else:
+		usb_text += "En este nivel no hay descargas: el pendrive solo sirve para conectar las PCs."
 	return (
 		"[color=#19e6ff][b]QUÉ HAY EN ESTE NIVEL[/b][/color]\n" +
-		"Una habitación con %d computadoras y un cronómetro de %d segundos. No hay estanterías ni papelera: no se cargan repuestos, se mueve el PENDRIVE que baja los archivos. Cada tarea resuelta suma %d puntos y devuelve %d segundos.\n\n" +
+		"Nivel %d · [b]%s[/b] · etapa %s. Hay %d computadoras y %d segundos. %s\n\n" +
 		"[color=#ff6b8a][b]CÓMO JUGAR[/b][/color]\n" +
-		"Cada ventana de PC tiene [color=#ffb020][b]DOS PESTAÑAS[/b][/color]: [color=#ffb020][b]EL ERROR[/b][/color] (el diagnóstico y el hueco USB) y, en cuanto metes el pendrive, [color=#19e6ff][b]PENDRIVE[/b][/color] (su contenido a la izquierda y los huecos de esa PC a la derecha: se arrastra de izquierda a derecha y se pulsa INSTALAR).\n\n" +
-		"[color=#19e6ff][b]1[/b][/color]\n" +
-		"   E sobre la PC [color=#19e6ff][b]INTERNET[/b][/color]: pulsa [color=#ffb020][b]INSERTAR PENDRIVE[/b][/color] (sin él no baja nada) y se abre el navegador con SOLO los %d archivos que piden las otras PCs: cada fila lleva su etiqueta «lo pide PC X». Cierra las ventanas emergentes con su botón CERRAR y, si una descarga se corta, pulsa REANUDAR. Después, en la pestaña PENDRIVE, arrastra cada descarga a su hueco y pulsa GUARDAR EN EL PENDRIVE.\n" +
-		"[color=#19e6ff][b]2[/b][/color]\n" +
-		"   E sobre la PC [color=#ff2e88][b]CONTROLADORES[/b][/color]: mete el pendrive ahí y hay tres secciones (NVIDIA, AMD e Intel). En la pestaña PENDRIVE arrastra cada driver al hueco de su sección y pulsa INSTALAR; los que digan FALTA hay que volver a bajarlos en la PC de internet.\n" +
-		"[color=#19e6ff][b]3[/b][/color]\n" +
-		"   E sobre la PC [color=#19e6ff][b]SISTEMA OPERATIVO[/b][/color]: con el pendrive metido, arrastra el sistema a su hueco en la pestaña PENDRIVE, elige el idioma y pulsa INSTALAR hasta ver el cartel verde.\n" +
-		"[color=#19e6ff][b]4[/b][/color]\n" +
-		"   E sobre la PC [color=#ff2e88][b]VIRUS[/b][/color]: pulsa ANALIZAR y arrastra los archivos infectados a la CUARENTENA sin tocar los buenos.\n" +
-		"[color=#19e6ff][b]5[/b][/color]\n" +
-		"   E sobre la PC [color=#19e6ff][b]PROCESOS[/b][/color]: termina SOLO los procesos con más del 50%% de CPU; los del sistema se quedan corriendo aunque su nombre dé desconfianza.\n" +
-		"[color=#19e6ff][b]6[/b][/color]\n" +
-		"   E sobre la PC [color=#ff2e88][b]CAMBIAR DE SISTEMA[/b][/color]: confirma el borrado del sistema viejo e instala el nuevo arrastrándolo en la pestaña PENDRIVE, con esa PC restando tiempo.\n" +
-		"[color=#19e6ff][b]7[/b][/color]\n" +
-		"   E sobre la PC [color=#19e6ff][b]ANUNCIOS[/b][/color]: cierra TODAS las ventanas emergentes con su ✕. Cuidado: una ✕ es FALSA y abre otra ventana, y con 4 abiertas a la vez entra malware.\n\n" +
+		"Camina con WASD, mira con el ratón y pulsa E sobre cada PC. Las ventanas de minijuego se operan con el ratón; ESC abre la pausa.\n\n" +
+		"[color=#ffb020][b]PASOS DE ESTE NIVEL[/b][/color]\n%s\n" +
 		"[color=#3ce08a][b]Objetivo[/b][/color]: resolver las %d tareas antes de que el reloj llegue a cero.\n\n" +
 		"[color=#19e6ff][b]CONTROLES[/b][/color]\n" +
-		"WASD para moverte, el mouse para mirar, E para interactuar y ESC para pausar o cerrar la ventana. Todo este mundo se juega con el ratón."
-	) % [
-		int(SOFTWARE_LEVELS[0].pc_count),
-		int(SOFTWARE_LEVELS[0].time),
-		POINTS_PER_TASK,
-		int(TIME_BONUS),
-		int(SW_DOWNLOAD_REQUEST.size()),
-		SOFTWARE_PROBLEMS.size(),
-	]
+		"WASD para moverte, ratón para mirar y E para interactuar. ESC pausa la partida."
+	) % [idx, level_title(idx, SECTION_SOFTWARE), level_stage_name(idx, SECTION_SOFTWARE), int(lvl.pc_count), int(lvl.time), usb_text, steps, kinds.size()]
+
+func server_level_info_text() -> String:
+	return (
+		"[color=#19e6ff][b]QUÉ HAY EN ESTE NIVEL[/b][/color]\n" +
+		"[b]%s[/b]. Una sala rectangular con una torre de servidor central, seis componentes y una PC de configuración. Tienes %d segundos.\n\n" % [level_title(1, SECTION_SERVER), int(SERVER_LEVELS[0].time)] +
+		"[color=#ff6b8a][b]ARMADO[/b][/color]\n" +
+		"Completa la torre en este orden: placa base, fuente, procesador, memoria ROM, memoria RAM y refrigeración líquida. Las opciones de RAM usan 128GB, 256GB o 512GB. Elige el modelo correcto, arrastra cada pieza a su hueco y completa su minijuego; el último usa refrigeración líquida.\n\n" +
+		"[color=#ffb020][b]CONFIGURACIÓN[/b][/color]\n" +
+		"Cuando los seis componentes estén instalados, aparecerá la PC CONFIGURACIÓN DEL SERVIDOR. Conéctale los cables, conecta sus puertos y programa la secuencia de arranque directamente en la PC.\n\n" +
+		"[color=#3ce08a][b]CONTROLES[/b][/color]\n" +
+		"WASD para moverte, ratón para mirar, E para interactuar y ESC para pausar."
+	)
 
 # Ficha corta de cada nivel en párrafos completos: qué hay, cómo se
 # juega y los controles. Se lee al pasar el mouse sobre el botón.
 func level_info_text(level_idx: int, section := 1) -> String:
 	if section == SECTION_SOFTWARE:
-		return software_level_info_text()
+		return software_level_info_text(level_idx)
+	if section == SECTION_SERVER:
+		return server_level_info_text()
 	var lvl: Dictionary = LEVELS[clampi(level_idx - 1, 0, LEVELS.size() - 1)]
 	var names: Array = []
 	for t: String in lvl.get("parts", ALL_PARTS):
@@ -764,7 +891,7 @@ func level_info_text(level_idx: int, section := 1) -> String:
 		)
 	return (
 		("[color=#19e6ff][b]QUÉ HAY EN ESTE NIVEL[/b][/color]\n" +
-		"%d computadoras contra un cronómetro de %d segundos. Cada reparación suma %d puntos y devuelve %d segundos. " +
+		"Nivel %d · [b]%s[/b] · etapa %s. %d computadoras contra un cronómetro de %d segundos. Cada reparación suma %d puntos y devuelve %d segundos. " +
 		"Solo aparecen estas piezas: %s.%s\n\n" +
 		"[color=#ff6b8a][b]CÓMO JUGAR[/b][/color]\n" +
 		"Pulsa E sobre una computadora para examinar sus slots (tienes %d examinaciones) y descubre qué componente falló. " +
@@ -774,6 +901,9 @@ func level_info_text(level_idx: int, section := 1) -> String:
 		"[color=#19e6ff][b]CONTROLES[/b][/color]\n" +
 		"WASD para moverte, el mouse para mirar, E para interactuar y ESC para pausar. Usa la tecla 1 para el destornillador llano y la 2 para el de cabeza cruz.")
 	) % [
+		level_idx,
+		level_title(level_idx),
+		level_stage_name(level_idx),
 		int(lvl.pc_count),
 		int(lvl.time),
 		POINTS_PER_TASK,
@@ -815,9 +945,15 @@ func start_level(level_idx: int, section := 1) -> void:
 	pc_count = lvl.pc_count
 	task_count = pc_count
 	time_left = lvl.time
+	server_parts_ready = false
+	server_config_done = false
+	server_installed_parts.clear()
 	if section == SECTION_SOFTWARE:
 		_build_software_tasks()
 		# El pendrive arranca VACÍO: es la PC de internet la que lo llena.
+		pendrive.clear()
+	elif section == SECTION_SERVER:
+		_build_server_tasks()
 		pendrive.clear()
 	else:
 		_build_tasks()
@@ -838,8 +974,8 @@ func start_game() -> void:
 
 # Arranca un tutorial: una habitación pequeña con UNA sola PC que tiene
 # exactamente la pieza indicada, sin cronómetro y sin penalizaciones.
-# También acepta las mecánicas del taller ("volt", "solder", "trash")
-# y las siete tareas del mundo de software (download, drivers, …).
+# También acepta las mecánicas del taller ("volt", "solder", "trash",
+# "liquid") y las siete tareas del mundo de software (download, drivers, …).
 func start_tutorial(part_type: String) -> void:
 	tutorial_mode = true
 	tutorial_part = part_type
@@ -859,7 +995,8 @@ func start_tutorial(part_type: String) -> void:
 	else:
 		time_left = LEVELS[0].time
 		current_tasks = [_tutorial_task(tutorial_station_part())]
-	# En la práctica también hay que meter el pendrive a mano en la PC.
+	# Las prácticas de software gestionan su pendrive; las de reparación
+	# trabajan directamente sobre la PC y no necesitan USB.
 	pendrive_pc = 0
 	repaired.clear()
 	score = 0
@@ -875,8 +1012,32 @@ func start_tutorial(part_type: String) -> void:
 # en el MISMO orden que se colocan los escritorios en la sala.
 func _build_software_tasks() -> void:
 	current_tasks.clear()
-	for i in SOFTWARE_PROBLEMS.size():
-		current_tasks.append(_software_task(SOFTWARE_PROBLEMS[i], i + 1))
+	var lvl: Dictionary = _level()
+	var kinds: Array = lvl.get("kinds", SOFTWARE_TUTORIALS)
+	if kinds.is_empty():
+		kinds = SOFTWARE_TUTORIALS
+	for i in pc_count:
+		var kind := str(kinds[i % kinds.size()])
+		current_tasks.append(_software_task(_software_problem(kind), i + 1))
+	# La PC de INTERNET descarga únicamente lo que necesitan las otras
+	# tareas de ESTE nivel. Así los niveles básicos no muestran archivos
+	# que el jugador no va a usar.
+	var requested: Array = []
+	for task: Dictionary in current_tasks:
+		if str(task.kind) == "download":
+			continue
+		for id: String in task.get("items", []):
+			if id in SW_DOWNLOAD_REQUEST and not requested.has(id):
+				requested.append(id)
+	for task: Dictionary in current_tasks:
+		if str(task.kind) == "download":
+			task.items = requested.duplicate()
+
+func _software_problem(kind: String) -> Dictionary:
+	for problem: Dictionary in SOFTWARE_PROBLEMS:
+		if str(problem.kind) == kind:
+			return problem
+	return SOFTWARE_PROBLEMS[0]
 
 func _software_task(problem: Dictionary, id: int) -> Dictionary:
 	return {
@@ -920,6 +1081,7 @@ const MECHANIC_SYMPTOM := {
 	"volt": "Sobretensión en los rieles: la PC se apaga sola",
 	"solder": "Fancooler quemado: la conexión quedó fundida",
 	"trash": "Arranca con pitidos y no inicia",
+	"liquid": "El circuito de refrigeración está vacío y la CPU se calienta",
 }
 
 func _tutorial_task(part_type: String) -> Dictionary:
@@ -988,9 +1150,38 @@ func quit_to_menu() -> void:
 	_apply_mouse_mode()
 
 func all_done() -> bool:
+	if uses_server_room():
+		return server_config_done
 	return repaired.size() >= task_count
 
+func server_current_part() -> String:
+	if not uses_server_room() or repaired.size() >= current_tasks.size():
+		return ""
+	var task: Dictionary = current_tasks[repaired.size()]
+	return str(task.get("fail", ""))
+
+func prepare_server_setup() -> void:
+	if uses_server_room() and not server_config_done and not server_parts_ready:
+		# El servidor se configura directamente en la PC: no se carga ningún
+		# pendrive ni se agregan archivos al inventario.
+		pendrive.clear()
+		server_parts_ready = true
+
+func complete_server_setup() -> void:
+	if not uses_server_room() or server_config_done:
+		return
+	server_config_done = true
+	score += POINTS_PER_TASK
+	time_left = clampf(time_left + TIME_BONUS, 0.0, level_time_total())
+	# La PC de configuración también recorre su ciclo visual normal: el
+	# rótulo pasa a LISTA antes de mostrar el resumen del nivel.
+	task_completed.emit(SERVER_CONFIG_ID)
+	_finish_level()
+
 func mark_repaired(pc_id: int) -> void:
+	if uses_server_room() and pc_id == SERVER_CONFIG_ID:
+		complete_server_setup()
+		return
 	if pc_id in repaired:
 		return
 	if tutorial_mode:
@@ -999,9 +1190,18 @@ func mark_repaired(pc_id: int) -> void:
 		tutorial_finished.emit()
 		return
 	repaired.append(pc_id)
+	if uses_server_room():
+		var server_task := _server_task_by_id(pc_id)
+		var installed_type := str(server_task.get("fail", ""))
+		if installed_type != "" and not server_installed_parts.has(installed_type):
+			server_installed_parts.append(installed_type)
 	score += POINTS_PER_TASK
 	time_left = clampf(time_left + TIME_BONUS, 0.0, level_time_total())
 	task_completed.emit(pc_id)
+	if uses_server_room():
+		if repaired.size() >= task_count:
+			prepare_server_setup()
+		return
 	if all_done():
 		_finish_level()
 
@@ -1017,11 +1217,11 @@ func remove_carried(data: Dictionary) -> void:
 		carried_parts.remove_at(idx)
 
 func random_variant(part_type: String) -> Dictionary:
-	var variants: Array = PART_VARIANTS.get(part_type, [])
+	var variants: Array = part_variants(part_type)
 	if variants.is_empty():
 		# Tipos sin variantes propias (tutoriales de software o
 		# mecánicas): se devuelve una ficha genérica en vez de romper.
-		return {"name": str(PART_TITLES.get(part_type, part_type)), "type": part_type}
+		return {"name": part_title(part_type), "type": part_type}
 	return variants[randi() % variants.size()]
 
 func penalize() -> void:
@@ -1030,6 +1230,25 @@ func penalize() -> void:
 	register_error()
 
 func new_task() -> Dictionary:
+	if uses_server_room():
+		var part_type: String = SERVER_PARTS[randi() % SERVER_PARTS.size()]
+		var variants: Array = part_variants(part_type)
+		var variant: Dictionary = variants[randi() % variants.size()] if not variants.is_empty() else {"name": part_title(part_type), "type": part_type}
+		_task_counter += 1
+		return {
+			"id": _task_counter,
+			"symptom": str(SERVER_SYMPTOMS.get(part_type, "Componente del servidor")),
+			"fail": part_type,
+			"fail2": "",
+			"part": part_title(part_type),
+			"part2": "",
+			"variant": str(variant.get("name", part_title(part_type))),
+			"variant2": "",
+			"fault": FAULT_SWAP,
+			"fix": FIX_SWAP,
+			"fault2": "",
+			"fix2": "",
+		}
 	var singles: Array = _level_singles()
 	var doubles: Array = _level_doubles()
 	# En el mundo de software no hay problemas de hardware: si alguien
@@ -1063,6 +1282,33 @@ func new_task() -> Dictionary:
 		"fault2": fault_for(p.fail2) if p.get("fail2", "") != "" else "",
 		"fix2": "",
 	}
+
+func _server_task_by_id(task_id: int) -> Dictionary:
+	for task: Dictionary in current_tasks:
+		if int(task.get("id", 0)) == task_id:
+			return task
+	return {}
+
+func _build_server_tasks() -> void:
+	current_tasks.clear()
+	for i in SERVER_PARTS.size():
+		var part_type: String = SERVER_PARTS[i]
+		var variants: Array = part_variants(part_type)
+		var variant: Dictionary = variants[0] if not variants.is_empty() else {"name": part_title(part_type), "type": part_type}
+		current_tasks.append({
+			"id": i + 1,
+			"symptom": str(SERVER_SYMPTOMS.get(part_type, "Componente del servidor sin instalar")),
+			"fail": part_type,
+			"fail2": "",
+			"part": part_title(part_type),
+			"part2": "",
+			"variant": str(variant.get("name", part_title(part_type))),
+			"variant2": "",
+			"fault": FAULT_SWAP,
+			"fix": FIX_SWAP,
+			"fault2": "",
+			"fix2": "",
+		})
 
 func _build_tasks() -> void:
 	current_tasks.clear()

@@ -289,55 +289,57 @@ custom_minimum_size = Vector2(500, 0)
 text = "Cada tutorial en su habitación, sin cronómetro."
 horizontal_alignment = 1
 
-[node name="TutorialsList" type="VBoxContainer" parent="TutorialsPickScreen/VBox"]
-theme_override_constants/separation = 12
+[node name="TutorialsList" type="GridContainer" parent="TutorialsPickScreen/VBox"]
+columns = 2
+theme_override_constants/h_separation = 12
+theme_override_constants/v_separation = 10
 
 [node name="TutRamButton" type="Button" parent="TutorialsPickScreen/VBox/TutorialsList"]
 unique_name_in_owner = true
-custom_minimum_size = Vector2(520, 38)
+custom_minimum_size = Vector2(250, 40)
 theme_override_font_sizes/font_size = 17
 text = "TUTORIAL: RAM"
 
 [node name="TutHddButton" type="Button" parent="TutorialsPickScreen/VBox/TutorialsList"]
 unique_name_in_owner = true
-custom_minimum_size = Vector2(520, 38)
+custom_minimum_size = Vector2(250, 40)
 theme_override_font_sizes/font_size = 17
 text = "TUTORIAL: DISCO DURO"
 
 [node name="TutPsuButton" type="Button" parent="TutorialsPickScreen/VBox/TutorialsList"]
 unique_name_in_owner = true
-custom_minimum_size = Vector2(520, 38)
+custom_minimum_size = Vector2(250, 40)
 theme_override_font_sizes/font_size = 17
 text = "TUTORIAL: FUENTE"
 
 [node name="TutGpuButton" type="Button" parent="TutorialsPickScreen/VBox/TutorialsList"]
 unique_name_in_owner = true
-custom_minimum_size = Vector2(520, 38)
+custom_minimum_size = Vector2(250, 40)
 theme_override_font_sizes/font_size = 17
 text = "TUTORIAL: GRÁFICA"
 
 [node name="TutMbButton" type="Button" parent="TutorialsPickScreen/VBox/TutorialsList"]
 unique_name_in_owner = true
-custom_minimum_size = Vector2(520, 38)
+custom_minimum_size = Vector2(250, 40)
 theme_override_font_sizes/font_size = 17
 text = "TUTORIAL: PLACA MADRE"
 
 [node name="TutCpuButton" type="Button" parent="TutorialsPickScreen/VBox/TutorialsList"]
 unique_name_in_owner = true
-custom_minimum_size = Vector2(520, 38)
+custom_minimum_size = Vector2(250, 40)
 theme_override_font_sizes/font_size = 17
 text = "TUTORIAL: PROCESADOR"
 
 [node name="TutFanButton" type="Button" parent="TutorialsPickScreen/VBox/TutorialsList"]
 unique_name_in_owner = true
-custom_minimum_size = Vector2(520, 38)
+custom_minimum_size = Vector2(250, 40)
 theme_override_font_sizes/font_size = 17
 text = "TUTORIAL: FANCOOLER"
 
 [node name="MechanicsHeader" type="Label" parent="TutorialsPickScreen/VBox"]
 theme_override_font_sizes/font_size = 15
 theme_override_colors/font_color = Color(0.1, 0.9, 1, 1)
-text = "MECÁNICAS DEL TALLER: VOLTMETRO · CAUTÍN · PAPELERA"
+text = "MECÁNICAS DEL TALLER: VOLTMETRO · CAUTÍN · PAPELERA · TUBERÍAS"
 horizontal_alignment = 1
 
 [node name="MechanicsRow" type="HBoxContainer" parent="TutorialsPickScreen/VBox"]
@@ -345,21 +347,27 @@ theme_override_constants/separation = 10
 
 [node name="TutVoltButton" type="Button" parent="TutorialsPickScreen/VBox/MechanicsRow"]
 unique_name_in_owner = true
-custom_minimum_size = Vector2(166, 40)
+custom_minimum_size = Vector2(120, 40)
 theme_override_font_sizes/font_size = 16
 text = "VOLTMETRO"
 
 [node name="TutSolderButton" type="Button" parent="TutorialsPickScreen/VBox/MechanicsRow"]
 unique_name_in_owner = true
-custom_minimum_size = Vector2(166, 40)
+custom_minimum_size = Vector2(120, 40)
 theme_override_font_sizes/font_size = 16
 text = "CAUTÍN"
 
 [node name="TutTrashButton" type="Button" parent="TutorialsPickScreen/VBox/MechanicsRow"]
 unique_name_in_owner = true
-custom_minimum_size = Vector2(166, 40)
+custom_minimum_size = Vector2(120, 40)
 theme_override_font_sizes/font_size = 16
 text = "PAPELERA"
+
+[node name="TutLiquidButton" type="Button" parent="TutorialsPickScreen/VBox/MechanicsRow"]
+unique_name_in_owner = true
+custom_minimum_size = Vector2(120, 40)
+theme_override_font_sizes/font_size = 16
+text = "TUBERÍAS"
 
 [node name="TutorialsPickBackButton" type="Button" parent="TutorialsPickScreen/VBox"]
 unique_name_in_owner = true

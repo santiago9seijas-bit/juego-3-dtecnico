@@ -10,28 +10,31 @@ if [ ! -x "$GODOT" ]; then
 fi
 DIR="$(cd "$(dirname "$0")/.." && pwd)"
 
-echo "== 1/8 import headless =="
+echo "== 1/9 import headless =="
 "$GODOT" --headless --import --path "$DIR" >/dev/null
 
-echo "== 2/8 test de mecanica (reparacion) =="
+echo "== 2/9 test de mecanica (reparacion) =="
 "$GODOT" --headless --path "$DIR" res://tests/test_mechanics.tscn
 
-echo "== 3/8 test de niveles (unlock, tareas, aleatorio) =="
+echo "== 3/9 test de niveles (unlock, tareas, aleatorio) =="
 "$GODOT" --headless --path "$DIR" res://tests/test_levels.tscn
 
-echo "== 4/8 test de partida (timer, puntaje, fin) =="
+echo "== 4/9 test de partida (timer, puntaje, fin) =="
 "$GODOT" --headless --path "$DIR" res://tests/test_game.tscn
 
-echo "== 5/8 test de input (el mouse rota la camara al jugar) =="
+echo "== 5/9 test de input (el mouse rota la camara al jugar) =="
 "$GODOT" --headless --path "$DIR" res://tests/test_input.tscn
 
-echo "== 6/8 test de fisica (piso solido, no caer al vacio) =="
+echo "== 6/9 test de fisica (piso solido, no caer al vacio) =="
 "$GODOT" --headless --path "$DIR" res://tests/test_floor.tscn
 
-echo "== 7/8 test de software (navegador, procesos, tutoriales) =="
+echo "== 7/9 test de software (navegador, procesos, tutoriales) =="
 "$GODOT" --headless --path "$DIR" res://tests/test_software.tscn
 
-echo "== 8/8 run del juego (300 frames, sin crash) =="
+echo "== 8/9 test de servidores (armado + configuración directa) =="
+"$GODOT" --headless --path "$DIR" res://tests/test_server.tscn
+
+echo "== 9/9 run del juego (300 frames, sin crash) =="
 timeout 60 "$GODOT" --headless --quit-after 300 --path "$DIR" 2>&1 | grep -iE "ERROR|SCRIPT ERROR" && exit 1 || true
 
 echo "TODO OK"

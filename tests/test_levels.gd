@@ -4,9 +4,9 @@ var failures := 0
 
 func _ready() -> void:
 	_check(Game.state == Game.State.MENU, "empieza en MENU")
-	_check(Game.unlocked_levels == 2, "las secciones 1 (hardware) y 2 (software) estan habilitadas")
+	_check(Game.unlocked_levels == 3, "las secciones 1 (hardware), 2 (software) y 3 (servidores) estan habilitadas")
 	_check(Game.LEVELS.size() == 6, "la seccion 1 se divide en 6 niveles")
-	_check(Game.SOFTWARE_LEVELS.size() == 1, "la seccion 2 se divide en 1 solo nivel")
+	_check(Game.SOFTWARE_LEVELS.size() == 6, "la seccion 2 se divide en 6 niveles")
 
 	# Nivel 1: sala pequena, piezas basicas, 3 PCs, sin mecánicas técnicas.
 	Game.start_level(1)
@@ -134,7 +134,7 @@ func _check_all_levels() -> void:
 	# Terminar un nivel no abre otras secciones del menú.
 	_finish_level()
 	_check(Game.state == Game.State.DONE, "el tiempo agotado termina la partida")
-	_check(Game.unlocked_levels == 2, "los niveles no desbloquean otras secciones")
+	_check(Game.unlocked_levels == 3, "los niveles mantienen las tres secciones habilitadas")
 
 # Mochila: las piezas dañadas se marcan y la papelera las bota.
 func _check_trash() -> void:
@@ -163,7 +163,7 @@ func _check_tutorial() -> void:
 	_check(Game.current_tasks[0].variant != "", "el tutorial trae su modelo de repuesto")
 	_check(Game.PART_INFO.has("ram") and Game.PART_INFO["ram"].use != "", "cada pieza tiene su ficha de uso")
 
-	# Tutoriales de mecánica: voltímetro, cautín y papelera.
+	# Tutoriales de mecánica: voltímetro, cautín, papelera y tuberías.
 	for mech in Game.MECHANIC_TUTORIALS:
 		Game.start_tutorial(mech)
 		_check(Game.tutorial_mechanic == mech, "tutorial de mecanica %s activo" % mech)
@@ -176,12 +176,15 @@ func _check_tutorial() -> void:
 			_check(Game.current_tasks[0].fault == "volt", "tutorial voltimetro enseña el daño de voltaje")
 		elif mech == "solder":
 			_check(Game.current_tasks[0].fault == "burn" and Game.current_tasks[0].fix == "solder", "tutorial cautin se arregla soldando")
-		else:
+		elif mech == "trash":
 			_check(Game.level_has_trash(), "tutorial papelera tiene papelera")
 			_check(Game.add_damaged({"name": "RAM quemada", "type": "ram"}), "tutorial papelera guarda la pieza danada")
 			_check(Game.damaged_count() == 1, "tutorial papelera cuenta la pieza danada")
 			Game.trash_damaged()
-		_check(Game.tutorial_station_part() != mech, "tutorial %s usa una pieza real en la estanteria" % mech)
+		else:
+			_check(Game.current_tasks[0].fail == "liquid", "tutorial liquid usa el sistema de refrigeracion")
+			_check(Game.current_tasks[0].variant.contains("líquido"), "tutorial liquid trae un kit de refrigeracion")
+		_check(Game.tutorial_station_part() != mech or mech == "liquid", "tutorial %s usa una pieza real en la estanteria" % mech)
 	Game.finish_tutorial()
 	Game.start_tutorial("ram")
 	_check(Game.tutorial_mechanic == "", "un tutorial de pieza no activa mecanicas")

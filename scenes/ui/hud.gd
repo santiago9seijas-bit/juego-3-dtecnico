@@ -29,6 +29,7 @@ var MINIGAMES := {
 	"processes": ProcessesMinigame,
 	"os_swap": OsSwapMinigame,
 	"ads": AdsMinigame,
+	"server_setup": ServerSetupMinigame,
 }
 var software_host: Control
 var software_panel: PanelContainer
@@ -39,6 +40,13 @@ var software_pendrive: Label
 var software_usb_row: HBoxContainer
 var software_usb_label: Label
 var software_usb_button: Button
+# Para VIRUS/PROCESOS/ANUNCIOS el USB es opcional: se muestra como
+# una tarjeta independiente, sin convertirla en otra sección obligatoria.
+var software_usb_card: PanelContainer
+var software_usb_card_title: Label
+var software_usb_card_status: Label
+var software_usb_card_button: Button
+var software_usb_card_files_button: Button
 var software_content: VBoxContainer
 var software_status: Label
 var software_close: Button
@@ -73,19 +81,16 @@ var _soft_done := false
 
 # UI propia del modo tutorial (se construye una sola vez en _ready).
 var tut_header: Label
-var tut_exit_button: Button
 var tut_intro: ColorRect
 var tut_intro_title: Label
 var tut_intro_body: RichTextLabel
 var tut_intro_start: Button
-var tut_intro_back: Button
 var tut_intro_hint: Label
 # Cajas que se recolocan al abrir cada pantalla según el tamaño de ventana.
 var tut_intro_margin: MarginContainer
 var tut_complete_panel: Control
 var tut_complete: CenterContainer
 var tut_repeat_button: Button
-var tut_complete_exit: Button
 var tut_complete_text: Label
 
 var _tut_part_shown := ""
@@ -125,7 +130,6 @@ func _ready() -> void:
 func _style_ui() -> void:
 	UiStyle.apply(gameplay_root)
 	UiStyle.apply(tut_header)
-	UiStyle.apply(tut_exit_button)
 	UiStyle.apply(tut_intro)
 	UiStyle.apply(tut_complete)
 	_neon_hud()
@@ -263,9 +267,23 @@ func show_message(text: String) -> void:
 # neón + ⚠) para que la vayas a botar a la papelera.
 func _show_carried() -> void:
 	# Mundo de software: aquí no hay mochila, así que el rótulo pasa a ser
-	# el MARCADOR de la sala (X de 7 PCs listas). En tutorial no se anota
+	# el MARCADOR de la sala (X de las PCs listas). En tutorial no se anota
 	# nada, así que se avisa de que es práctica libre. De paso no se
 	# recalcula inventario en cada frame.
+	if Game.uses_server_room():
+		var server_text := "Servidor: %d/%d componentes" % [Game.repaired.size(), Game.task_count]
+		var server_color := UiStyle.CYAN
+		if Game.server_parts_ready:
+			server_text = "Servidor armado · PC CONFIGURACIÓN"
+			server_color = Color(0.7, 0.45, 1.0)
+		if Game.damaged_count() > 0:
+			server_text += " · ⚠ %d dañada%s" % [Game.damaged_count(), "" if Game.damaged_count() == 1 else "s"]
+			server_color = UiStyle.MAGENTA
+		if server_text != _last_carried_text:
+			_last_carried_text = server_text
+			carried_label.text = server_text
+			carried_label.add_theme_color_override("font_color", server_color)
+		return
 	if Game.uses_software_room():
 		var sw_text := "TUTORIAL · sin cronómetro y sin penalizaciones"
 		var sw_color := UiStyle.CYAN_SOFT
@@ -322,8 +340,13 @@ func open_minigame(pc: Node) -> void:
 
 func _fix_minigame_layout() -> void:
 	await get_tree().process_frame
-	minigame.custom_minimum_size = Vector2(860, 520)
-	minigame.size = Vector2(860, 520)
+	var liquid_game := is_instance_valid(minigame.current_pc) and str(minigame.current_pc.get("fail_type")) == "liquid" and (Game.uses_server_room() or Game.tutorial_mode)
+	var desired := Vector2(1000, 620) if liquid_game else Vector2(860, 520)
+	var viewport_size := get_viewport().get_visible_rect().size
+	desired.x = minf(desired.x, maxf(640.0, viewport_size.x - 24.0))
+	desired.y = minf(desired.y, maxf(420.0, viewport_size.y - 24.0))
+	minigame.custom_minimum_size = desired
+	minigame.size = desired
 	minigame.set_anchors_and_offsets_preset(Control.PRESET_CENTER)
 
 func close_minigame() -> void:
@@ -331,8 +354,8 @@ func close_minigame() -> void:
 	Game.is_minigame_open = false
 
 func open_picker(part_type: String) -> void:
-	var part_title: String = Game.PART_TITLES.get(part_type, part_type)
-	var variants: Array = Game.PART_VARIANTS[part_type]
+	var part_title: String = Game.part_title(part_type)
+	var variants: Array = Game.part_variants(part_type)
 	var box_title := "Estantería de %s — elige el modelo:" % part_title
 	# En el tutorial la caja trae SOLO el repuesto exacto que pide esa PC.
 	if Game.tutorial_mode and Game.current_tasks.size() == 1:
@@ -466,7 +489,8 @@ func _build_software_ui() -> void:
 	# Pestaña 1 "EL ERROR": qué le pasa a esta PC, el hueco USB y el
 	# diagnóstico. Pestaña 2 "PENDRIVE": el contenido del pendrive y los
 	# huecos de esta PC, para arrastrar de un lado a otro y darle a
-	# INSTALAR. La 2ª solo existe mientras el pendrive está enchufado aquí.
+	# INSTALAR. La 2ª solo existe mientras el pendrive está enchufado aquí;
+	# la configuración del servidor la oculta porque trabaja sin USB.
 	software_tabs = HBoxContainer.new()
 	software_tabs.name = "SoftwareTabs"
 	software_tabs.add_theme_constant_override("separation", 10)
@@ -499,6 +523,45 @@ func _build_software_ui() -> void:
 	software_pendrive.add_theme_color_override("font_color", UiStyle.CYAN_SOFT)
 	software_page_error.add_child(software_pendrive)
 
+	# Tarjeta independiente para tareas cuyo USB es opcional. No reemplaza
+	# the minigame: se puede limpiar la PC con o sin pendrive.
+	software_usb_card = PanelContainer.new()
+	software_usb_card.name = "OptionalUsbCard"
+	software_usb_card.visible = false
+	var usb_card_style := StyleBoxFlat.new()
+	usb_card_style.bg_color = Color(0.025, 0.09, 0.13, 0.96)
+	usb_card_style.border_color = Color(UiStyle.CYAN, 0.75)
+	usb_card_style.set_border_width_all(2)
+	usb_card_style.set_corner_radius_all(8)
+	usb_card_style.content_margin_left = 14.0
+	usb_card_style.content_margin_right = 14.0
+	usb_card_style.content_margin_top = 10.0
+	usb_card_style.content_margin_bottom = 10.0
+	software_usb_card.add_theme_stylebox_override("panel", usb_card_style)
+	var usb_card_box := VBoxContainer.new()
+	usb_card_box.add_theme_constant_override("separation", 5)
+	software_usb_card.add_child(usb_card_box)
+	var usb_card_head := HBoxContainer.new()
+	usb_card_head.add_theme_constant_override("separation", 8)
+	usb_card_box.add_child(usb_card_head)
+	software_usb_card_title = SwUI.label("PENDRIVE · OPCIONAL", 16, UiStyle.CYAN_SOFT)
+	software_usb_card_title.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	usb_card_head.add_child(software_usb_card_title)
+	software_usb_card_files_button = Button.new()
+	software_usb_card_files_button.text = "VER ARCHIVOS"
+	software_usb_card_files_button.custom_minimum_size = Vector2(150, 32)
+	software_usb_card_files_button.pressed.connect(_open_optional_usb_page)
+	usb_card_head.add_child(software_usb_card_files_button)
+	software_usb_card_status = SwUI.label("", 14, UiStyle.TEXT_DIM)
+	software_usb_card_status.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
+	usb_card_box.add_child(software_usb_card_status)
+	software_usb_card_button = Button.new()
+	software_usb_card_button.text = "INSERTAR PENDRIVE"
+	software_usb_card_button.custom_minimum_size = Vector2(230, 38)
+	software_usb_card_button.pressed.connect(_on_usb_pressed)
+	usb_card_box.add_child(software_usb_card_button)
+	software_page_error.add_child(software_usb_card)
+
 	# HUECO USB: el pendrive hay que METERLO en la PC para que esta PC
 	# pueda bajar o instalar lo que necesita (y sacarlo para llevarlo a otra).
 	software_usb_row = HBoxContainer.new()
@@ -520,9 +583,9 @@ func _build_software_ui() -> void:
 	software_usb_button.pressed.connect(_on_usb_pressed)
 	software_usb_row.add_child(software_usb_button)
 
-	# AVISO DE BLOQUEO: en TODA PC hay que meter el pendrive antes de
-	# empezar. Mientras no esté metido, este cartel ocupa el sitio del
-	# minijuego (con su botón INSERTAR grande, para no perderse).
+	# AVISO DE BLOQUEO: solo aparece en tareas que necesitan USB.
+	# En procesos/anuncios la limpieza funciona sin él y la tarjeta
+	# independiente ofrece insertarlo como opción.
 	software_block = PanelContainer.new()
 	software_block.name = "SoftwareBlock"
 	software_block.visible = false
@@ -769,6 +832,21 @@ func _show_software_tab(which: String) -> void:
 	software_tab_usb.button_pressed = which == "usb"
 	if which == "usb":
 		_rebuild_usb_page()
+
+func _open_optional_usb_page() -> void:
+	if _soft_pc == null or software_page_usb == null:
+		return
+	var kind := str(_soft_pc.get("kind"))
+	if not Game.usb_optional(kind):
+		return
+	_soft_tab = "usb"
+	software_page_error.visible = false
+	software_page_usb.visible = true
+	software_tab_error.visible = true
+	software_tab_error.button_pressed = true
+	software_tab_usb.visible = false
+	_rebuild_usb_page()
+
 
 func _clear_usb_page() -> void:
 	if software_usb_items == null:
@@ -1051,13 +1129,29 @@ func open_software(pc: Node) -> void:
 		software_page_usb.visible = false
 		software_page_error.visible = true
 	var kind := str(pc.get("kind"))
-	software_title.text = "PC %d · %s" % [int(pc.pc_id), Game.PART_TITLES.get(kind, "PC")]
+	var optional_usb := Game.usb_optional(kind)
+	if software_tab_error:
+		if kind == "server_setup":
+			software_tab_error.text = "CONFIGURACIÓN"
+		elif optional_usb:
+			software_tab_error.text = "LIMPIEZA"
+		else:
+			software_tab_error.text = "EL ERROR"
+	if software_usb_card:
+		software_usb_card.visible = optional_usb
+	if kind == "server_setup":
+		software_title.text = "PC · CONFIGURACIÓN DEL SERVIDOR"
+	else:
+		software_title.text = "PC %d · %s" % [int(pc.pc_id), Game.PART_TITLES.get(kind, "PC")]
 	# El título toma el color propio de la estación (mismo color que su
 	# rótulo 3D y su pantalla) para distinguir de un vistazo de qué PC es.
 	var accent: Color = SoftwarePC.KIND_COLORS.get(kind, UiStyle.CYAN)
 	software_title.add_theme_color_override("font_color", accent)
 	software_title.add_theme_color_override("font_outline_color", Color(accent.r, accent.g, accent.b, 0.45))
-	software_symptom.text = "SÍNTOMA: %s" % str(pc.get("symptom"))
+	if kind == "server_setup":
+		software_symptom.text = "OBJETIVO: cables → puertos → programación del servidor"
+	else:
+		software_symptom.text = "SÍNTOMA: %s" % str(pc.get("symptom"))
 	_last_pd_text = ""
 	_last_usb_text = ""
 	_refresh_software_pendrive()
@@ -1074,7 +1168,12 @@ func open_software(pc: Node) -> void:
 		pc_number = int(pc.pc_id)
 	node.setup(soft_state, pc.get("task") if "task" in pc else {}, pc_number)
 	node.finished.connect(_on_software_done)
-	software_status.text = "Resuelve la tarea para reparar esta PC. ESC la cierra sin perder el avance."
+	if kind == "server_setup":
+		software_status.text = "Configura el servidor directamente: cables, puertos y programación. ESC la cierra sin perder el avance."
+	elif optional_usb:
+		software_status.text = "Limpia la PC con o sin pendrive. ESC la cierra sin perder el avance."
+	else:
+		software_status.text = "Resuelve la tarea para reparar esta PC. ESC la cierra sin perder el avance."
 	software_status.add_theme_color_override("font_color", UiStyle.TEXT_DIM)
 	software_panel.visible = true
 	software_host.visible = true
@@ -1101,6 +1200,24 @@ func _refresh_software_pendrive() -> void:
 		var task: Variant = _soft_pc.get("task")
 		if task is Dictionary:
 			items = task.get("items", [])
+	if Game.usb_optional(kind):
+		text = "PENDRIVE · OPCIONAL"
+		color = UiStyle.CYAN_SOFT
+		if text != _last_pd_text:
+			_last_pd_text = text
+			software_pendrive.text = text
+			software_pendrive.add_theme_color_override("font_color", color)
+		_refresh_software_usb()
+		return
+	if kind == "server_setup":
+		text = "MODO DIRECTO · SIN PENDRIVE"
+		color = Color(0.72, 0.5, 1.0)
+		if text != _last_pd_text:
+			_last_pd_text = text
+			software_pendrive.text = text
+			software_pendrive.add_theme_color_override("font_color", color)
+		_refresh_software_usb()
+		return
 	if not items.is_empty():
 		var pending: Array = []
 		for id: Variant in items:
@@ -1145,12 +1262,13 @@ func _on_usb_pressed() -> void:
 	if _soft_pc == null:
 		return
 	var pc_id := int(_soft_pc.get("pc_id"))
+	var pc_name := Game.pc_display_name(pc_id)
 	if Game.pendrive_in(pc_id):
 		Game.pendrive_unplug()
-		show_message("Pendrive sacado de la PC %d" % pc_id)
+		show_message("Pendrive sacado de %s" % pc_name)
 	else:
 		Game.pendrive_plug(pc_id)
-		show_message("¡Pendrive metido en la PC %d!" % pc_id)
+		show_message("¡Pendrive metido en %s!" % pc_name)
 	_last_pd_text = ""
 	_last_usb_text = ""
 	_refresh_software_pendrive()
@@ -1176,17 +1294,30 @@ func _refresh_software_usb() -> void:
 		software_tab_usb.visible = _usb_tab_available()
 		if _soft_tab == "usb" and not software_tab_usb.visible:
 			_show_software_tab("error")
+	if Game.usb_optional(kind):
+		var optional_pc_id := int(_soft_pc.get("pc_id"))
+		var optional_plugged := Game.pendrive_in(optional_pc_id)
+		software_usb_row.visible = false
+		if software_block:
+			software_block.visible = false
+		if software_scroll:
+			software_scroll.visible = true
+		if software_usb_card:
+			software_usb_card.visible = true
+			software_usb_card_status.text = "Pendrive metido: puedes limpiar igualmente o abrir sus archivos." if optional_plugged else "Opcional: puedes limpiar esta PC sin meterlo."
+			software_usb_card_button.text = "SACAR PENDRIVE" if optional_plugged else "INSERTAR PENDRIVE"
+		return
 	if not software_usb_row.visible:
 		return
 	var pc_id := int(_soft_pc.get("pc_id"))
 	var plugged := Game.pendrive_in(pc_id)
-	# REGLA DE LAS SIETE PCs: sin el pendrive metido no se empieza nada.
+	# REGLA DE LAS PCs DE SOFTWARE: sin el pendrive metido no se empieza nada.
 	# El aviso ocupa el sitio del minijuego hasta que lo enchufes.
 	if software_block != null:
 		software_block.visible = not plugged
 		if not plugged and software_block_body != null:
 			if Game.pendrive_pc > 0 and Game.pendrive_pc != pc_id:
-				software_block_body.text = "El pendrive está en la PC %d. Pulsa INSERTAR PENDRIVE: sale de ahí y entra en ESTA y la tarea ya puede empezar." % Game.pendrive_pc
+				software_block_body.text = "El pendrive está en %s. Pulsa INSERTAR PENDRIVE: sale de ahí y entra en ESTA y la tarea ya puede empezar." % Game.pc_display_name(Game.pendrive_pc)
 			else:
 				software_block_body.text = "Esta PC no trabaja sin él: mételo para empezar. Después se abre la pestaña PENDRIVE con sus cuadros."
 	if software_scroll != null:
@@ -1203,7 +1334,7 @@ func _refresh_software_usb() -> void:
 	else:
 		var where := ""
 		if Game.pendrive_pc > 0:
-			where = " (está en la PC %d: sácalo de ahí)" % Game.pendrive_pc
+			where = " (está en %s: sácalo de ahí)" % Game.pc_display_name(Game.pendrive_pc)
 		text = "HUECO USB · ✗ EL PENDRIVE NO ESTÁ METIDO EN ESTA PC%s. Sin él no se baja ni se instala nada." % where
 		color = Color(1.0, 0.55, 0.2)
 		button_text = "INSERTAR PENDRIVE"
@@ -1262,7 +1393,10 @@ func _close_and_repair(pc: Node) -> void:
 	var already := id in Game.repaired
 	Game.mark_repaired(id)
 	if not Game.tutorial_mode and not already:
-		show_message("¡PC %d reparada! +%d puntos" % [id, Game.POINTS_PER_TASK])
+		if Game.uses_server_room() and id == Game.SERVER_CONFIG_ID:
+			show_message("¡Servidor configurado! +%d puntos" % Game.POINTS_PER_TASK)
+		else:
+			show_message("¡PC %d reparada! +%d puntos" % [id, Game.POINTS_PER_TASK])
 
 func open_removal(part_type: String, on_done: Callable, reverse := false, mode := "") -> void:
 	_removal_cb = on_done
@@ -1328,20 +1462,7 @@ func _build_tutorial_ui() -> void:
 	tut_header.add_theme_color_override("font_color", UiStyle.CYAN)
 	tut_header.visible = false
 
-	# Abajo a la izquierda: arriba estorba.
-	tut_exit_button = Button.new()
-	tut_exit_button.name = "TutorialExit"
-	add_child(tut_exit_button)
-	tut_exit_button.set_anchors_and_offsets_preset(Control.PRESET_BOTTOM_LEFT)
-	tut_exit_button.offset_left = 16.0
-	tut_exit_button.offset_right = 236.0
-	tut_exit_button.offset_top = -58.0
-	tut_exit_button.offset_bottom = -16.0
-	tut_exit_button.text = "VOLVER AL MENÚ"
-	tut_exit_button.add_theme_font_size_override("font_size", 16)
-	tut_exit_button.visible = false
-	tut_exit_button.pressed.connect(_exit_tutorial)
-
+	# La salida del tutorial se hace con ESC → pausa → VOLVER AL MENÚ.
 	tut_intro = ColorRect.new()
 	tut_intro.name = "TutorialIntro"
 	add_child(tut_intro)
@@ -1400,7 +1521,7 @@ func _build_tutorial_intro() -> void:
 	hint.add_theme_font_size_override("font_size", 15)
 	box.add_child(hint)
 
-	# LA NAVEGACIÓN FUERA DEL SCROLL: EMPEZAR y VOLVER se ven siempre.
+	# La navegación queda fuera del scroll: EMPEZAR siempre está visible.
 	var nav := HBoxContainer.new()
 	nav.name = "IntroNav"
 	nav.alignment = BoxContainer.ALIGNMENT_CENTER
@@ -1413,13 +1534,6 @@ func _build_tutorial_intro() -> void:
 	tut_intro_start.add_theme_font_size_override("font_size", 22)
 	tut_intro_start.pressed.connect(_start_practice)
 	nav.add_child(tut_intro_start)
-
-	tut_intro_back = Button.new()
-	tut_intro_back.text = "VOLVER"
-	tut_intro_back.custom_minimum_size = Vector2(180, 54)
-	tut_intro_back.add_theme_font_size_override("font_size", 22)
-	tut_intro_back.pressed.connect(_exit_tutorial)
-	nav.add_child(tut_intro_back)
 
 func _build_tutorial_complete() -> void:
 	tut_complete = CenterContainer.new()
@@ -1466,13 +1580,6 @@ func _build_tutorial_complete() -> void:
 	tut_repeat_button.pressed.connect(_repeat_tutorial)
 	nav.add_child(tut_repeat_button)
 
-	tut_complete_exit = Button.new()
-	tut_complete_exit.text = "VOLVER AL MENÚ DE NIVELES"
-	tut_complete_exit.custom_minimum_size = Vector2(420, 52)
-	tut_complete_exit.add_theme_font_size_override("font_size", 18)
-	tut_complete_exit.pressed.connect(_exit_tutorial)
-	nav.add_child(tut_complete_exit)
-
 # Ajusta las dos pantallas de tutorial al tamaño REAL de la ventana: el
 # ancho del texto se adapta y, si la ventana es estrecha, los botones se
 # encogen con ella. Se recalcula cada vez que una pantalla se enseña.
@@ -1488,7 +1595,6 @@ func _fit_tutorial_screens() -> void:
 		tut_complete_panel.custom_minimum_size = Vector2(card_w, 0)
 		var btn_w := maxf(220.0, minf(440.0, vp.x - 96.0))
 		tut_repeat_button.custom_minimum_size = Vector2(btn_w, 52)
-		tut_complete_exit.custom_minimum_size = Vector2(btn_w, 52)
 
 func _update_tutorial_ui() -> void:
 	var on := Game.tutorial_mode
@@ -1496,7 +1602,6 @@ func _update_tutorial_ui() -> void:
 	score_label.visible = not on
 	errors_label.visible = not on
 	tut_header.visible = on
-	tut_exit_button.visible = on
 	if not on:
 		if _tut_part_shown != "":
 			_tut_part_shown = ""
@@ -1514,9 +1619,9 @@ func _show_tutorial_intro() -> void:
 	tut_intro_title.text = "TUTORIAL: %s" % Game.PART_TITLES.get(Game.tutorial_part, "").to_upper()
 	tut_intro_body.text = Game.part_info_text(Game.tutorial_part)
 	if Game.tutorial_part in Game.SOFTWARE_TUTORIALS:
-		tut_intro_hint.text = "Recorre la habitación, pulsa E sobre la PC y resuelve el minijuego con el ratón.\nSin cronómetro y sin penalizaciones: repítelo las veces que quieras."
+		tut_intro_hint.text = "Recorre la habitación, pulsa E sobre la PC y resuelve el minijuego con el ratón.\nSin cronómetro y sin penalizaciones. Pulsa ESC cuando quieras abrir la pausa."
 	else:
-		tut_intro_hint.text = "Recorre la habitación, examina la PC y lleva el repuesto al slot dañado.\nSin cronómetro: puedes practicar las veces que quieras."
+		tut_intro_hint.text = "Recorre la habitación, examina la PC y lleva el repuesto al slot dañado.\nSin cronómetro: puedes practicar las veces que quieras. Pulsa ESC para pausar."
 	tut_intro.visible = true
 	UiStyle.fade_in(tut_intro)
 	tut_intro_start.grab_focus.call_deferred()

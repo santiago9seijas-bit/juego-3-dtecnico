@@ -21,8 +21,14 @@ var remaining := 0
 var _slot_nodes: Dictionary = {}
 var _expected: Dictionary = {}
 var _examines_left := 4
+# Cada apertura de una PC invalida los retardos de la apertura anterior.
+# Así reiniciar el nivel no puede cerrar el minijuego de otra PC.
+var _setup_generation := 0
+var _liquid_board: LiquidCoolingMinigame = null
 
+@onready var title_label: Label = $Margin/VBox/Title
 @onready var symptom_label: Label = %SymptomLabel
+@onready var tray_label: Label = $Margin/VBox/TrayLabel
 @onready var tray: VBoxContainer = %Tray
 @onready var feedback_label: Label = %FeedbackLabel
 @onready var result_label: Label = %ResultLabel
@@ -43,6 +49,14 @@ func _prop(node: Node, key: String) -> String:
 		return str(v) if v != null else ""
 	return ""
 
+func _is_server_assembly() -> bool:
+	return Game.uses_server_room() and is_instance_valid(current_pc) and bool(current_pc.get("server_assembly"))
+
+func _is_liquid_game() -> bool:
+	if not is_instance_valid(current_pc) or not ("fail_type" in current_pc):
+		return false
+	return str(current_pc.get("fail_type")) == "liquid" and (_is_server_assembly() or Game.tutorial_mode)
+
 func _ready() -> void:
 	for t in SLOT_ORDER:
 		var slot: RepairSlot = get_node("Margin/VBox/Slots/Slot%s" % t.to_upper())
@@ -52,6 +66,7 @@ func _ready() -> void:
 		slot.examine_requested.connect(_on_examine_requested)
 		slot.repair_requested.connect(_on_repair_requested)
 		slot.measure_first_requested.connect(_on_measure_first)
+		slot.title_label.text = Game.part_title(t)
 		_slot_nodes[t] = slot
 	close_button.pressed.connect(_close)
 	help_button.pressed.connect(_toggle_help)
@@ -93,7 +108,18 @@ func _help_box(bg: Color, border: Color, glow_alpha: float) -> StyleBoxFlat:
 	return box
 
 func setup(pc: Node) -> void:
+	_setup_generation += 1
 	current_pc = pc
+	title_label.visible = true
+	symptom_label.visible = true
+	feedback_label.visible = true
+	examine_left_label.visible = true
+	result_label.visible = true
+	_clear_liquid_board()
+	get_node("Margin/VBox/Slots").visible = true
+	tray_label.text = "TUS REPUESTOS (arrastra el modelo correcto al slot dañado)"
+	tray_label.visible = true
+	tray.visible = true
 	fail_types = [pc.fail_type]
 	if "fail_type2" in pc and pc.fail_type2 != "":
 		fail_types.append(pc.fail_type2)
@@ -105,8 +131,13 @@ func setup(pc: Node) -> void:
 		elif t != pc.fail_type and "fail_variant2" in pc:
 			vname = pc.fail_variant2
 		if vname == "":
-			vname = Game.PART_VARIANTS[t][0].name
+			vname = Game.part_default_name(t)
 		_expected[t] = {"name": vname, "type": t}
+	if _is_liquid_game():
+		_setup_liquid_cooling()
+		return
+	for t in _slot_nodes:
+		_slot_nodes[t].title_label.text = Game.part_title(t)
 	# Tipo de daño de cada slot: decide el brillo al examinar y si se
 	# arregla con el cautín (SOLDAR) o cambiando la pieza.
 	for t in _slot_nodes:
@@ -120,13 +151,23 @@ func setup(pc: Node) -> void:
 				fault = _prop(pc, "fail_fault2")
 				fix = _prop(pc, "fail_fix2")
 		_slot_nodes[t].set_fault(fault, fix)
+	if _is_server_assembly():
+		title_label.text = "ARMADO DEL SERVIDOR"
+		help_rich.text = "1. Lee el SÍNTOMA de la torre.\n2. Elige el modelo del siguiente componente en su caja.\n3. Arrástralo al hueco vacío que dice INSTALAR AQUÍ.\n4. Al terminar, la torre pasa al siguiente hueco."
+	else:
+		title_label.text = "REPARACION DE COMPUTADORA"
+		help_rich.text = HELP_TEXT
 	symptom_label.text = pc.symptom
-	feedback_label.text = "Examina las piezas para saber cuál está dañada y qué modelo necesita."
+	feedback_label.text = "Elige el modelo del siguiente componente y arrástralo al hueco INSTALAR AQUÍ." if _is_server_assembly() else "Examina las piezas para saber cuál está dañada y qué modelo necesita."
 	feedback_label.add_theme_color_override("font_color", Color(1, 1, 1, 0.8))
 	result_label.text = ""
 	for t in _slot_nodes:
 		_slot_nodes[t].set_revealed(false)
-	if pc.repair_state.has(pc.pc_id):
+	if _is_server_assembly():
+		# La torre se reconstruye desde las piezas ya instaladas; no se
+		# guarda un estado de PC tradicional entre tiradas.
+		_reset_slots()
+	elif pc.repair_state.has(pc.pc_id):
 		_load_state(pc.repair_state[pc.pc_id])
 	else:
 		_reset_slots()
@@ -137,7 +178,90 @@ func setup(pc: Node) -> void:
 	help_panel.visible = false
 	_apply_slot_scope()
 	_refresh_examine_label()
+	if _is_server_assembly():
+		examine_left_label.text = "Componentes instalados: %d/%d" % [Game.server_installed_parts.size(), Game.task_count]
+		examine_left_label.add_theme_color_override("font_color", UiStyle.CYAN_SOFT)
 	visible = true
+
+func _clear_liquid_board() -> void:
+	if is_instance_valid(_liquid_board):
+		var parent := _liquid_board.get_parent()
+		if parent:
+			parent.remove_child(_liquid_board)
+		_liquid_board.queue_free()
+	_liquid_board = null
+
+func _setup_liquid_cooling() -> void:
+	var slots_root := get_node("Margin/VBox/Slots") as Control
+	slots_root.visible = false
+	# El cuadro grande ya lleva su propio título y ayuda; ocultar los dos
+	# encabezados del panel libera espacio para que CERRER quede visible.
+	title_label.visible = false
+	symptom_label.visible = false
+	help_rich.text = "1. Arrastra el kit líquido al cuadro para aparezca el mapa térmico.\n2. Arrastra rectas, L, cruces y piezas CPU/RAM/ROM/GPU/PSU/MB; las rectas también cubren bloques.\n3. Pulsa GIRAR (o usa clic derecho, rueda o R) para cambiar la orientación.\n4. Usa QUITAR ÚLTIMA o clic derecho sobre una pieza colocada para corregir.\n5. Conecta desde IN hasta OUT, bota el líquido en IN y espera el 100%.\n6. Pulsa ENCENDER BOMBA."
+	symptom_label.text = current_pc.symptom
+	if Game.tutorial_mode:
+		feedback_label.text = "Práctica: monta el circuito de refrigeración líquida del servidor."
+	else:
+		feedback_label.text = "El servidor necesita refrigeración líquida para terminar el armado."
+	feedback_label.add_theme_color_override("font_color", Color(0.2, 0.9, 1.0))
+	result_label.text = ""
+	tray_label.text = "TUS REPUESTOS (arrastra el kit líquido al circuito)"
+	tray_label.visible = true
+	tray.visible = true
+	if Game.tutorial_mode:
+		examine_left_label.text = "PRÁCTICA · TUBERÍAS LÍQUIDAS"
+	else:
+		examine_left_label.text = "Componentes instalados: %d/%d" % [Game.server_installed_parts.size(), Game.task_count]
+	examine_left_label.add_theme_color_override("font_color", UiStyle.CYAN_SOFT)
+	help_panel.visible = false
+
+	var vbox := get_node("Margin/VBox") as VBoxContainer
+	var board := LiquidCoolingMinigame.new()
+	board.name = "LiquidCoolingBoard"
+	vbox.add_child(board)
+	vbox.move_child(board, tray.get_index())
+	board.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	board.completed.connect(_on_liquid_completed)
+	board.kit_placed.connect(_on_liquid_kit_placed)
+	board.setup(str(_expected.get("liquid", {}).get("name", "")))
+	_liquid_board = board
+	_build_tray()
+	visible = true
+
+func _on_liquid_kit_placed() -> void:
+	# El cuadro tiene sus propios mensajes y la barra; retiramos los duplicados
+	# del panel para que CERRER siga visible en el minijuego grande.
+	tray_label.visible = false
+	tray.visible = false
+	feedback_label.visible = false
+	examine_left_label.visible = false
+	result_label.visible = false
+
+
+func _on_liquid_completed(data: Dictionary) -> void:
+	if not _is_liquid_game() or not is_instance_valid(current_pc):
+		return
+	_consume_part(data)
+	if data in Game.carried_parts:
+		Game.remove_carried(data)
+	var completed_id := int(current_pc.pc_id)
+	Game.mark_repaired(completed_id)
+	repaired.emit(completed_id)
+	var server_done := Game.repaired.size() >= Game.task_count
+	if Game.tutorial_mode:
+		feedback_label.text = "Práctica de refrigeración líquida completada."
+		result_label.text = "TUTORIAL DE TUBERÍAS COMPLETADO"
+	else:
+		feedback_label.text = "Servidor armado. Ahora falta configurar el servidor." if server_done else "Refrigeración líquida instalada."
+		result_label.text = "SERVIDOR ARMADO" if server_done else "REFRIGERACIÓN LÍQUIDA INSTALADA"
+	feedback_label.add_theme_color_override("font_color", Color(0.4, 1, 0.5))
+	result_label.add_theme_color_override("font_color", Color(0.4, 1, 0.5))
+	var generation := _setup_generation
+	get_tree().create_timer(1.2).timeout.connect(func() -> void:
+		if generation == _setup_generation and is_instance_valid(current_pc):
+			_close()
+	)
 
 # En el tutorial solo se ve el hueco de la pieza que hay que arreglar,
 # con la pieza dañada ya a la vista (sin necesidad de examinarla).
@@ -159,6 +283,8 @@ func _apply_slot_scope() -> void:
 		_slot_nodes[only].set_revealed(true)
 
 func _save_state() -> void:
+	if _is_server_assembly():
+		return
 	var snap: Dictionary = {}
 	for t in SLOT_ORDER:
 		var slot: RepairSlot = _slot_nodes[t]
@@ -176,16 +302,24 @@ func _load_state(snap: Dictionary) -> void:
 				var v: Dictionary = _expected[t]
 				slot.set_part({"name": v.name, "type": t, "good": false})
 			else:
-				slot.set_part({"name": SLOT_INFO[t].good, "type": t, "good": true})
+				slot.set_part({"name": Game.part_default_name(t), "type": t, "good": true})
 
 func _reset_slots() -> void:
 	for t in SLOT_ORDER:
 		var slot: RepairSlot = _slot_nodes[t]
-		if t in fail_types:
+		if _is_server_assembly():
+			if t in Game.server_installed_parts:
+				slot.set_part({"name": Game.part_default_name(t), "type": t, "good": true})
+				slot.set_revealed(true)
+			else:
+				slot.clear_part()
+				slot.set_revealed(false)
+				slot.set_install_target(t == str(current_pc.fail_type))
+		elif t in fail_types:
 			var v: Dictionary = _expected[t]
 			slot.set_part({"name": v.name, "type": t, "good": false})
 		else:
-			slot.set_part({"name": SLOT_INFO[t].good, "type": t, "good": true})
+			slot.set_part({"name": Game.part_default_name(t), "type": t, "good": true})
 
 func _update_remaining() -> void:
 	remaining = fail_types.size()
@@ -234,7 +368,7 @@ func _on_examine_requested(slot: RepairSlot) -> void:
 	_examines_left -= 1
 	_refresh_examine_label()
 	slot.set_revealed(true)
-	var title: String = SLOT_INFO[slot.slot_type].title
+	var title: String = Game.part_title(slot.slot_type)
 	if slot.has_broken_part():
 		var detail := ""
 		if slot.fault == "volt":
@@ -307,10 +441,13 @@ func _finish_solder(slot: RepairSlot, measured := false) -> void:
 func _expected_for(slot_type: String) -> Dictionary:
 	if slot_type in _expected:
 		return _expected[slot_type]
-	return {"name": SLOT_INFO[slot_type].good, "type": slot_type}
+	return {"name": Game.part_default_name(slot_type), "type": slot_type}
 
 func _on_part_dropped(slot: RepairSlot, data: Dictionary) -> void:
 	if remaining <= 0:
+		return
+	if _is_server_assembly() and slot.slot_type != str(current_pc.fail_type):
+		_miss("El siguiente hueco es %s. Llena primero ese componente." % Game.part_title(str(current_pc.fail_type)))
 		return
 	if not data.get("good", true):
 		_miss("Ese repuesto está DAÑADA: bóotalo en la papelera y toma uno bueno de la estantería.")
@@ -343,6 +480,21 @@ func _after_fix(slot: RepairSlot, next_text: String) -> void:
 	if slot.slot_type in fail_types:
 		_examines_left = _exam_limit()
 		_refresh_examine_label()
+	if _is_server_assembly():
+		var completed_id := int(current_pc.pc_id)
+		Game.mark_repaired(completed_id)
+		repaired.emit(completed_id)
+		var server_done := Game.repaired.size() >= Game.task_count
+		feedback_label.text = "Servidor armado. Ahora falta configurar el servidor." if server_done else "Componente instalado. El siguiente hueco está esperando."
+		feedback_label.add_theme_color_override("font_color", Color(0.4, 1, 0.5))
+		result_label.text = "SERVIDOR ARMADO" if server_done else "COMPONENTE INSTALADO"
+		result_label.add_theme_color_override("font_color", Color(0.4, 1, 0.5))
+		var generation := _setup_generation
+		get_tree().create_timer(1.2).timeout.connect(func() -> void:
+			if generation == _setup_generation and is_instance_valid(current_pc):
+				_close()
+		)
+		return
 	if remaining <= 0:
 		feedback_label.text = "¡Reparado!"
 		feedback_label.add_theme_color_override("font_color", Color(0.4, 1, 0.5))
@@ -350,7 +502,11 @@ func _after_fix(slot: RepairSlot, next_text: String) -> void:
 		result_label.add_theme_color_override("font_color", Color(0.4, 1, 0.5))
 		Game.mark_repaired(current_pc.pc_id)
 		repaired.emit(current_pc.pc_id)
-		get_tree().create_timer(1.2).timeout.connect(_close)
+		var generation := _setup_generation
+		get_tree().create_timer(1.2).timeout.connect(func() -> void:
+			if generation == _setup_generation and is_instance_valid(current_pc):
+				_close()
+		)
 	else:
 		feedback_label.text = next_text
 		feedback_label.add_theme_color_override("font_color", Color(0.4, 1, 0.5))
@@ -365,6 +521,9 @@ func _finish_wrong_install(slot: RepairSlot, data: Dictionary, expected_name: St
 
 func _on_remove_requested(slot: RepairSlot) -> void:
 	if remaining <= 0:
+		return
+	if _is_server_assembly() and slot.slot_type in Game.server_installed_parts:
+		_info("Ese componente ya está instalado en el servidor.")
 		return
 	if slot.is_empty():
 		_info("Ese slot está vacío, no hay nada que sacar.")
@@ -413,7 +572,7 @@ func _miss(text: String) -> void:
 	feedback_label.add_theme_color_override("font_color", Color(1, 0.4, 0.4))
 
 func _close() -> void:
-	if current_pc:
+	if is_instance_valid(current_pc):
 		_save_state()
 	visible = false
 	Game.is_minigame_open = false

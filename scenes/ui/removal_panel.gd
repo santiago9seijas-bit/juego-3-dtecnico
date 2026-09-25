@@ -14,6 +14,159 @@ const SCREW_COLORS := [
 const DRIVER_NAMES := {"flat": "LLANA", "phillips": "CRUZ"}
 const DRIVER_KEYS := {"flat": "1", "phillips": "2"}
 
+class RamBoard:
+	extends Control
+
+	signal completed
+
+	const DOT_RADIUS := 15.0
+	const START_Y := 0.80
+	const TARGET_Y := 0.38
+	const REVERSE_START_Y := 0.42
+	const REVERSE_TARGET_Y := 0.78
+	const LIFT_TOLERANCE := 0.10
+
+	var reverse := false
+	var _start_y := START_Y
+	var _target_y := TARGET_Y
+	var _dot_x := [0.20, 0.80, 0.50]
+	var _dot_y := [START_Y, START_Y, START_Y]
+	var _dot_visible := [true, true, false]
+	var _dot_lifted := [false, false, false]
+	var _dragging := -1
+	var _drag_offset := 0.0
+	var _completed := false
+	var _t := 0.0
+
+	func _init() -> void:
+		mouse_filter = Control.MOUSE_FILTER_STOP
+		mouse_default_cursor_shape = Control.CURSOR_POINTING_HAND
+		custom_minimum_size = Vector2(360, 180)
+		set_process(true)
+
+	func configure(is_reverse: bool) -> void:
+		reverse = is_reverse
+		_start_y = REVERSE_START_Y if reverse else START_Y
+		_target_y = REVERSE_TARGET_Y if reverse else TARGET_Y
+		_dot_y = [_start_y, _start_y, _start_y]
+		_dot_visible = [false, false, true] if reverse else [true, true, false]
+		_dot_lifted = [false, false, false]
+		_completed = false
+		queue_redraw()
+
+	func _process(delta: float) -> void:
+		_t += delta
+		queue_redraw()
+
+	func _dot_pos(index: int) -> Vector2:
+		return Vector2(size.x * float(_dot_x[index]), size.y * float(_dot_y[index]))
+
+	func _target_pos(index: int) -> Vector2:
+		return Vector2(size.x * float(_dot_x[index]), size.y * _target_y)
+
+	func _gui_input(event: InputEvent) -> void:
+		if event is InputEventMouseButton and event.button_index == MOUSE_BUTTON_LEFT:
+			if event.pressed:
+				for i in 3:
+					if not bool(_dot_visible[i]) or bool(_dot_lifted[i]):
+						continue
+					if event.position.distance_to(_dot_pos(i)) <= DOT_RADIUS + 12.0:
+						_dragging = i
+						_drag_offset = event.position.y - _dot_pos(i).y
+						accept_event()
+						return
+			elif _dragging >= 0:
+				var index := _dragging
+				_dragging = -1
+				_release_dot(index)
+				accept_event()
+		elif event is InputEventMouseMotion and _dragging >= 0:
+			var index := _dragging
+			var low := minf(_start_y, _target_y)
+			var high := maxf(_start_y, _target_y)
+			_dot_y[index] = clampf(
+				(event.position.y - _drag_offset) / maxf(size.y, 1.0),
+				low,
+				high
+			)
+			queue_redraw()
+
+	func _release_dot(index: int) -> void:
+		var at_target := false
+		if reverse:
+			at_target = float(_dot_y[index]) >= _target_y - LIFT_TOLERANCE
+		else:
+			at_target = float(_dot_y[index]) <= _target_y + LIFT_TOLERANCE
+		if at_target:
+			_dot_y[index] = _target_y
+			_dot_lifted[index] = true
+			if reverse:
+				if bool(_dot_lifted[2]):
+					_dot_visible[0] = true
+					_dot_visible[1] = true
+			elif bool(_dot_lifted[0]) and bool(_dot_lifted[1]):
+				_dot_visible[2] = true
+			if bool(_dot_lifted[0]) and bool(_dot_lifted[1]) and bool(_dot_lifted[2]):
+				_completed = true
+				completed.emit()
+		else:
+			_dot_y[index] = _start_y
+		queue_redraw()
+
+	# Permite a las pruebas completar una secuencia sin depender de la
+	# posición exacta del ratón; el jugador usa el arrastre real.
+	func lift_dot_for_test(index: int) -> void:
+		if index < 0 or index > 2 or not bool(_dot_visible[index]) or bool(_dot_lifted[index]):
+			return
+		_dot_y[index] = _target_y
+		_release_dot(index)
+
+	func _draw() -> void:
+		var font := get_theme_default_font()
+		var pulse := 0.5 + 0.5 * sin(_t * 4.0)
+		var action := "insertar" if reverse else "extraer"
+		draw_rect(Rect2(Vector2.ZERO, size), Color(0.035, 0.06, 0.10))
+		for gx in range(0, int(size.x), 24):
+			draw_line(Vector2(gx, 0), Vector2(gx, size.y), Color(UiStyle.CYAN, 0.07), 1.0)
+		for gy in range(0, int(size.y), 24):
+			draw_line(Vector2(0, gy), Vector2(size.x, gy), Color(UiStyle.CYAN, 0.07), 1.0)
+		draw_rect(Rect2(Vector2.ZERO, size), Color(UiStyle.CYAN, 0.55), false, 2.0)
+		draw_string(font, Vector2(12, 22), "PUNTOS DE LA RAM · %s" % action,
+			HORIZONTAL_ALIGNMENT_LEFT, size.x - 24, 15, UiStyle.CYAN)
+		var lifted := 0
+		for value in _dot_lifted:
+			if bool(value):
+				lifted += 1
+		var status := "1/2 · ARRASTRA LOS PUNTOS LATERALES HACIA ARRIBA"
+		if reverse:
+			status = "1/1 · ARRASTRA EL PUNTO CENTRAL HACIA ABAJO"
+			if lifted >= 1:
+				status = "2/2 · APARECEN LOS PUNTOS LATERALES"
+		elif lifted >= 2:
+			status = "2/2 · APARECE EL PUNTO CENTRAL"
+		if lifted >= 3:
+			status = "3/3 · RAM LISTA"
+		draw_string(font, Vector2(12, 43), status,
+			HORIZONTAL_ALIGNMENT_LEFT, size.x - 24, 13, UiStyle.TEXT_DIM)
+		var labels := ["IZQUIERDA", "DERECHA", "CENTRO"]
+		for i in 3:
+			if not bool(_dot_visible[i]):
+				continue
+			var target := _target_pos(i)
+			var bottom := Vector2(target.x, size.y * _start_y)
+			var current := _dot_pos(i)
+			var line_color := Color(UiStyle.CYAN, 0.35) if not bool(_dot_lifted[i]) else Color(0.2, 1.0, 0.55, 0.8)
+			draw_line(target, bottom, line_color, 3.0)
+			draw_circle(target, DOT_RADIUS + 7.0, Color(line_color, 0.16 + 0.08 * pulse))
+			draw_circle(target, DOT_RADIUS, Color(line_color, 0.65), false, 2.0)
+			var dot_color := UiStyle.CYAN if i != 2 else UiStyle.AMBER
+			if bool(_dot_lifted[i]):
+				dot_color = Color(0.25, 1.0, 0.55)
+			draw_circle(current, DOT_RADIUS + 8.0, Color(dot_color, 0.2))
+			draw_circle(current, DOT_RADIUS, dot_color)
+			draw_string(font, Vector2(target.x - 65.0, size.y - 8.0), labels[i],
+				HORIZONTAL_ALIGNMENT_CENTER, 130.0, 12, UiStyle.TEXT_DIM)
+
 class SlideComponent:
 	extends Control
 
@@ -464,6 +617,7 @@ var _screw_area: ScrewArea
 var _slider_h: Slider
 var _slider_v: Slider
 var _slide_component: SlideComponent
+var _ram_board: RamBoard
 var _solder_track: SolderTrack
 var _volt_meter: VoltMeter
 var _stage_done: Callable = Callable()
@@ -528,16 +682,16 @@ func open(part_type: String, reverse := false, mode := "") -> void:
 	last_solder_ok = true
 	_clear_content()
 	var accion := "Instalar" if reverse else "Desarmar"
-	title_label.text = "%s - %s" % [accion, Game.PART_TITLES.get(part_type, part_type)]
+	title_label.text = "%s - %s" % [accion, Game.part_title(part_type)]
 	# Reparar con el cautín: solo la pista de soldadura, sin cambiar nada.
 	if mode == "solder":
-		title_label.text = "Soldar - %s" % Game.PART_TITLES.get(part_type, part_type)
+		title_label.text = "Soldar - %s" % Game.part_title(part_type)
 		_build_solder(func() -> void: done.emit(), "", true)
 		return
 	# Vía segura: PRIMERO se miden los rieles con el voltímetro y DESPUÉS
 	# se suelda (si aquí fallas, la pieza no se pierde).
 	if mode == "volt_solder":
-		title_label.text = "Medir y soldar - %s" % Game.PART_TITLES.get(part_type, part_type)
+		title_label.text = "Medir y soldar - %s" % Game.part_title(part_type)
 		_build_volt(func() -> void: _build_solder(func() -> void: done.emit(), "ya mediste: este soldado es SEGURO", false), "Paso 1 — mide los rieles con el voltímetro")
 		return
 	# Niveles con mecánicas nuevas: al INSTALAR placa o fuente primero se
@@ -620,6 +774,7 @@ func _clear_content() -> void:
 	_slider_h = null
 	_slider_v = null
 	_slide_component = null
+	_ram_board = null
 	_solder_track = null
 	_volt_meter = null
 	_stage_done = Callable()
@@ -664,26 +819,24 @@ func _style_slider(s: Slider) -> void:
 	s.add_theme_stylebox_override("grab_area_highlight", grab)
 
 func _build_ram() -> void:
+	_mode = "ram"
+	var nombre := Game.part_title("ram")
 	if _reverse:
-		_make_hint("Arrastra el soporte hacia la IZQUIERDA para insertar la RAM")
+		_make_hint("%s: primero baja el punto central; después baja los puntos izquierdo y derecho para insertarlo" % nombre)
 	else:
-		_make_hint("Arrastra el soporte hacia la DERECHA para extraer la RAM")
-	var s := HSlider.new()
-	s.min_value = 0.0
-	s.max_value = 100.0
-	s.value = 100.0 if _reverse else 0.0
-	s.step = 1.0
-	s.custom_minimum_size = Vector2(320, 30)
-	_style_slider(s)
-	content.add_child(s)
-	s.value_changed.connect(func(_v: float) -> void:
-		if (_reverse and s.value <= 0.0) or (not _reverse and s.value >= 100.0):
-			done.emit())
+		_make_hint("%s: primero sube los dos puntos laterales; después sube el punto central para extraerlo" % nombre)
+	var center := CenterContainer.new()
+	content.add_child(center)
+	var board := RamBoard.new()
+	board.configure(_reverse)
+	center.add_child(board)
+	_ram_board = board
+	board.completed.connect(func() -> void: _fire_stage())
 
 func _build_slide_right(part_type: String, on_done: Callable = Callable(), step_text := "") -> void:
 	_clear_content()
 	_stage_done = on_done
-	var nombre: String = Game.PART_TITLES.get(part_type, part_type)
+	var nombre: String = Game.part_title(part_type)
 	var prefix := (step_text + " — ") if step_text != "" else ""
 	if _reverse:
 		_make_hint("%sDesliza %s hacia la IZQUIERDA para instalarlo" % [prefix, nombre])
@@ -912,12 +1065,13 @@ func _wrong_driver_hint(head_type: String) -> void:
 		]
 
 func _build_cpu() -> void:
+	var nombre := Game.part_title("cpu")
 	if _reverse:
-		_make_hint("Paso 1: desliza el procesador hacia la IZQUIERDA para colocarlo")
+		_make_hint("Paso 1: desliza %s hacia la IZQUIERDA para colocarlo" % nombre)
 		_slider_h = _make_hslider(100.0)
 		_slider_h.value_changed.connect(_on_cpu_h_reverse)
 	else:
-		_make_hint("Paso 1: desliza el procesador hacia la DERECHA")
+		_make_hint("Paso 1: desliza %s hacia la DERECHA" % nombre)
 		_slider_h = _make_hslider(0.0)
 		_slider_h.value_changed.connect(_on_cpu_h)
 
@@ -947,7 +1101,9 @@ func _make_vslider(initial: float) -> VSlider:
 
 func _unlock_cpu_vertical(initial: float) -> void:
 	_slider_h.editable = false
-	_make_hint("Paso 2: ahora desliza el procesador hacia ABAJO" if _reverse else "Paso 2: ahora desliza el procesador hacia ARRIBA")
+	var nombre := Game.part_title("cpu")
+	var direction := "ABAJO" if _reverse else "ARRIBA"
+	_make_hint("Paso 2: ahora desliza %s hacia %s" % [nombre, direction])
 	_slider_v = _make_vslider(initial)
 	_slider_v.value_changed.connect(_on_cpu_v)
 

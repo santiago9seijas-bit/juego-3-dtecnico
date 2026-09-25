@@ -54,6 +54,10 @@ func _physics_process(delta: float) -> void:
 	_update_interactable()
 
 func _update_interactable() -> void:
+	# Al cambiar de sala, el objetivo anterior puede haber sido liberado con
+	# su PC. Nunca se intenta apagar un highlight de un nodo inválido.
+	if not is_instance_valid(current_interactable):
+		current_interactable = null
 	var target := _raycast_interactable()
 	if target == current_interactable:
 		return

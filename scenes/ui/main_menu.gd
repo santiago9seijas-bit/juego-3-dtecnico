@@ -27,6 +27,7 @@ extends Control
 @onready var tut_mb_button: Button = %TutMbButton
 @onready var tut_cpu_button: Button = %TutCpuButton
 @onready var tut_fan_button: Button = %TutFanButton
+@onready var tut_liquid_button: Button = %TutLiquidButton
 @onready var tut_volt_button: Button = %TutVoltButton
 @onready var tut_solder_button: Button = %TutSolderButton
 @onready var tut_trash_button: Button = %TutTrashButton
@@ -70,7 +71,7 @@ extends Control
 var _screens: Array[Control] = []
 var _tut_page := 0
 var _tut_part_buttons: Array = []
-# Sección abierta en el menú de niveles: 1 = reparación, 2 = software.
+# Sección abierta en el menú de niveles: 1 = reparación, 2 = software, 3 = servidores.
 var _current_section := 1
 # Los tutoriales del mundo de software (uno por minijuego, botones
 # creados por código para que se monten en el menú orbital).
@@ -133,7 +134,8 @@ func _ready() -> void:
 		[tut_mb_button, "mb"],
 		[tut_cpu_button, "cpu"],
 		[tut_fan_button, "fan"],
-		# Mecánicas del taller (voltímetro, cautín y papelera).
+		[tut_liquid_button, "liquid"],
+		# Mecánicas del taller (voltímetro, cautín, papelera y tuberías).
 		[tut_volt_button, "volt"],
 		[tut_solder_button, "solder"],
 		[tut_trash_button, "trash"],
@@ -181,15 +183,9 @@ func _build_orbit_menus() -> void:
 		section.append(b)
 	section.append(tutorial_options_back_button)
 	_orbit(tutorial_options_screen, section)
-	var pick_buttons: Array = [
-		tut_ram_button, tut_hdd_button, tut_psu_button, tut_gpu_button,
-		tut_mb_button, tut_cpu_button, tut_fan_button,
-		tut_volt_button, tut_solder_button, tut_trash_button,
-	]
-	for part: String in Game.SOFTWARE_TUTORIALS:
-		pick_buttons.append(_tut_software_buttons[part])
-	pick_buttons.append(tutorials_pick_back_button)
-	_orbit(tutorials_pick_screen, pick_buttons)
+	# Los tutoriales usan una rejilla: muchos botones en un solo arco se
+	# amontonaban, sobre todo en el taller.
+	_style_tutorial_grid()
 	_orbit(controls_screen, [controls_back_button])
 	_orbit(pause_screen, [resume_button, restart_button, pause_menu_button])
 	_orbit(finish_screen, [next_level_button, replay_button, finish_menu_button])
@@ -207,11 +203,13 @@ func _orbit(screen: Control, buttons: Array) -> void:
 		# La pantalla de tutoriales es la más cargada (las 17 prácticas
 		# del juego): su arco se encoge para que ENTRE COMPLETA en la
 		# ventana de 1152x648 sin recortar ningún botón.
-		orbit.sphere_radius = 56.0
+		orbit.sphere_radius = 50.0
 		orbit.side_margin = 12.0
-		orbit.gap = 8.0
+		# Más aire entre las selecciones: en hardware se ven 10 botones y antes
+		# quedaban demasiado pegados al arquearse alrededor del agujero negro.
+		orbit.gap = 18.0
 		orbit.max_button_width = 320.0
-		orbit.max_span_deg = 170.0
+		orbit.max_span_deg = 175.0
 	for raw in buttons:
 		var button := raw as Button
 		if button == null:
@@ -226,6 +224,40 @@ func _orbit(screen: Control, buttons: Array) -> void:
 		if child is Container and not (child is OrbitMenu) and child.get_child_count() == 0:
 			box.remove_child(child)
 			child.queue_free()
+
+# Rejilla de tutoriales: dos columnas para que los botones del taller no
+# se amontonen. Las mecánicas y VOLVER conservan su fila inferior.
+func _style_tutorial_grid() -> void:
+	var grid := tutorials_pick_screen.get_node_or_null("VBox/TutorialsList") as GridContainer
+	if grid:
+		grid.columns = 2
+		grid.add_theme_constant_override("h_separation", 12)
+		grid.add_theme_constant_override("v_separation", 10)
+		grid.alignment = BoxContainer.ALIGNMENT_CENTER
+		grid.size_flags_horizontal = Control.SIZE_SHRINK_CENTER
+		grid.custom_minimum_size = Vector2(520, 0)
+		for child in grid.get_children():
+			if child is Button:
+				var button := child as Button
+				button.custom_minimum_size = Vector2(250, 40)
+				button.size_flags_horizontal = Control.SIZE_SHRINK_CENTER
+				_style_tutorial_pill(button)
+	for button in [tut_volt_button, tut_solder_button, tut_trash_button, tut_liquid_button, tutorials_pick_back_button]:
+		if button != tutorials_pick_back_button:
+			(button as Button).custom_minimum_size = Vector2(120, 40)
+		_style_tutorial_pill(button as Button)
+
+func _style_tutorial_pill(button: Button) -> void:
+	if button == null or button.has_meta("tutorial_pill"):
+		return
+	button.set_meta("tutorial_pill", true)
+	for state: String in ["normal", "hover", "pressed", "focus", "disabled"]:
+		var base := button.get_theme_stylebox(state, "Button") as StyleBoxFlat
+		if base == null:
+			continue
+		var pill := base.duplicate() as StyleBoxFlat
+		pill.set_corner_radius_all(20)
+		button.add_theme_stylebox_override(state, pill)
 
 # La caja de botones de la pantalla (puede estar dentro de la tarjeta).
 func _find_box(screen: Control) -> VBoxContainer:
@@ -251,6 +283,14 @@ func _unhandled_input(event: InputEvent) -> void:
 			_show_pause()
 		elif Game.state == Game.State.PAUSED:
 			_resume()
+		elif tutorials_pick_screen.visible:
+			_open_section_menu()
+		elif tutorial_options_screen.visible:
+			_open_levels()
+		elif level_screen.visible:
+			_open_main()
+		elif tutorial_screen.visible:
+			_open_main()
 
 # ------------------------------------------------------------------
 # Dos columnas en los menús de selección: los botones quedan a la
@@ -263,14 +303,14 @@ func _build_info_layout() -> void:
 	_panel_pick = _split_columns(tutorials_pick_screen)
 	# La ficha de tutoriales es más estrecha: así el conjunto (botones +
 	# ficha) siempre cabe entero en la ventana.
-	_panel_pick.custom_minimum_size = Vector2(470, 400)
+	_panel_pick.custom_minimum_size = Vector2(430, 400)
 
 	_wire_info(level_buttons[0], _panel_level, Game.SECTION_NAMES[0], Game.SECTION_INFO[0])
 	_wire_info(level_buttons[1], _panel_level, Game.SECTION_NAMES[1], Game.SECTION_INFO[1])
 	_wire_info(level_buttons[2], _panel_level, Game.SECTION_NAMES[2], Game.SECTION_INFO[2])
 
-	# La ficha de TUTORIALES y la de cada nivel dependen del mundo abierto
-	# (la sección de software tiene UN nivel y otro tipo de tarea).
+	# La ficha de TUTORIALES y la de cada nivel dependen del mundo abierto.
+	# Las dos secciones muestran seis niveles con su etapa de dificultad.
 	section_tutorials_button.mouse_entered.connect(_show_tutorials_info)
 	for i in section_level_buttons.size():
 		section_level_buttons[i].mouse_entered.connect(_show_section_level_info.bind(i + 1))
@@ -396,7 +436,7 @@ func _open_levels() -> void:
 		level_buttons[i].text = section_name if unlocked else "%s — BLOQUEADO" % section_name
 	_show_screen(level_screen)
 
-# Solo las secciones 1 (reparación) y 2 (software) están habilitadas.
+# Las secciones 1 (reparación), 2 (software) y 3 (servidores) están habilitadas.
 func _select_section(idx: int) -> void:
 	if idx > Game.unlocked_levels:
 		return
@@ -404,14 +444,17 @@ func _select_section(idx: int) -> void:
 	_refresh_section_menu()
 	_show_screen(tutorial_options_screen)
 
-# El menú de la sección se arma según el mundo: su título y cuántos
-# niveles tiene (la sección de software trae UN solo nivel).
+# El menú de la sección se arma según el mundo: su título y los seis
+# niveles de progresión (básicos, avanzados y todo junto).
 func _refresh_section_menu() -> void:
 	if section_title:
 		section_title.text = Game.SECTION_NAMES[_current_section - 1]
+	section_tutorials_button.visible = _current_section != Game.SECTION_SERVER
 	var total := Game.levels_for(_current_section).size()
 	for i in section_level_buttons.size():
 		section_level_buttons[i].visible = i < total
+		if section_level_buttons[i].visible:
+			section_level_buttons[i].text = "NIVEL %d · %s" % [i + 1, Game.level_title(i + 1, _current_section)]
 
 # La ficha de TUTORIALES cambia según el mundo al que se entró.
 func _show_tutorials_info() -> void:
@@ -429,7 +472,7 @@ func _new_software_tut_button(part: String) -> Button:
 	var button := Button.new()
 	button.name = "TutSoftware%sButton" % part.capitalize()
 	button.text = "TUTORIAL: %s" % Game.PART_TITLES.get(part, part).to_upper()
-	button.custom_minimum_size = Vector2(520, 38)
+	button.custom_minimum_size = Vector2(250, 40)
 	button.add_theme_font_size_override("font_size", 17)
 	button.visible = false
 	tut_ram_button.get_parent().add_child(button)
@@ -450,9 +493,9 @@ func _open_tutorials_pick() -> void:
 		pick_title.text = "TUTORIALES · %s" % Game.SECTION_NAMES[_current_section - 1]
 	if pick_hint:
 		pick_hint.text = (
-			"Siete minijuegos, cada uno en su habitación, sin cronómetro."
+			"Siete minijuegos · niveles 1-2 básicos, 3-4 avanzados y 5-6 todo junto. ESC vuelve."
 			if software else
-			"Piezas y mecánicas del taller, sin cronómetro."
+			"Piezas y mecánicas del taller, sin cronómetro. ESC vuelve."
 		)
 	if mechanics_header:
 		mechanics_header.visible = not software
@@ -569,8 +612,11 @@ func _next_level() -> void:
 	visible = false
 
 func _to_menu() -> void:
-	Game.tutorial_mode = false
-	Game.quit_to_menu()
+	if Game.tutorial_mode:
+		# El tutorial también se abandona desde ESC → pausa.
+		Game.finish_tutorial()
+	else:
+		Game.quit_to_menu()
 	_open_main()
 
 func _on_finished() -> void:

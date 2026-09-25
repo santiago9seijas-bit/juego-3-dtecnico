@@ -29,6 +29,7 @@ const KIND_TITLES := {
 	"processes": "PROCESOS",
 	"os_swap": "CAMBIAR SO",
 	"ads": "ANUNCIOS",
+	"server_setup": "CONFIGURACIÓN",
 }
 const KIND_COLORS := {
 	"download": Color(0.1, 0.85, 1.0),
@@ -38,9 +39,11 @@ const KIND_COLORS := {
 	"processes": Color(1.0, 0.69, 0.13),
 	"os_swap": Color(0.48, 0.36, 1.0),
 	"ads": Color(0.1, 0.85, 1.0),
+	"server_setup": Color(0.55, 0.35, 1.0),
 }
 
 var _highlight: MeshInstance3D
+var _collision_shape: CollisionShape3D
 var _screen_mat: StandardMaterial3D
 var _label: Label3D
 # Tira LED del escritorio: marca la estación y se pone verde al repararla.
@@ -61,7 +64,9 @@ func _build() -> void:
 	var shape := BoxShape3D.new()
 	shape.size = Vector3(1.1, 1.0, 0.4)
 	var body := CollisionShape3D.new()
+	body.name = "InteractionShape"
 	body.shape = shape
+	_collision_shape = body
 	add_child(body)
 
 	# Pantalla (todo en uno) con el color del tipo de problema.
@@ -140,13 +145,15 @@ func _build() -> void:
 	# las imágenes de sistema que luego se llevan en el pendrive. Se marca
 	# con una segunda línea para que se vea de un vistazo en la sala.
 	if kind == "download":
-		_label.text = "INTERNET\nDE AQUÍ SALEN DRIVERS Y SISTEMAS"
+		# Tres líneas (no dos): en la esquina la línea larga se saldría
+		# por el muro lateral. Aun así se lee entera.
+		_label.text = "INTERNET\nDE AQUÍ SALEN\nDRIVERS Y SISTEMAS"
 		_label.font_size = 34
 		_label.position = Vector3(0, 1.34, 0)
 		_label.vertical_alignment = VERTICAL_ALIGNMENT_CENTER
 
 	# Tira LED en el borde frontal del escritorio: da color a la estación
-	# (mismo tono que su pantalla y su rótulo) para leer las siete PCs de un
+	# (mismo tono que su pantalla y su rótulo) para leer las PCs del nivel de un
 	# vistazo. Es decorativa: NO tiene colisión, así la mira del jugador
 	# sigue llegando sin tropiezos al monitor.
 	var led_mesh := BoxMesh.new()
@@ -168,7 +175,7 @@ func _on_completed(pc_id: int) -> void:
 	if pc_id != self.pc_id:
 		return
 	state.clear()
-	prompt_text = "PC %d · lista" % pc_id
+	prompt_text = "%s · lista" % Game.pc_display_name(pc_id)
 	if _screen_mat:
 		_screen_mat.emission = Color(0.2, 0.95, 0.5)
 		_screen_mat.emission_energy_multiplier = 0.5
@@ -184,6 +191,14 @@ func _on_completed(pc_id: int) -> void:
 
 # Se puede entrar en CUALQUIER PC en cualquier momento, aunque ya esté
 # reparada: el jugador puede volver a internet a mirar o a bajar más.
+# Permite guardar una PC de una fase posterior fuera de la interacción
+# hasta que la sala revele su estación. `visible = false` por sí solo no
+# desactiva la colisión del RayCast3D.
+func set_available(on: bool) -> void:
+	visible = on
+	if _collision_shape:
+		_collision_shape.disabled = not on
+
 func interact(_player: Node3D) -> void:
 	super(_player)
 	if Game.hud:

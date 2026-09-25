@@ -191,6 +191,36 @@ func _ready() -> void:
 	_check(panel._screws_removed == panel._screw_total, "todos los tornillos salen con su destornillador correcto")
 	Game.hud.removal_panel.visible = false
 
+	# ---- RAM: primero los dos puntos laterales y luego el central ----
+	panel.open("ram", false)
+	var ram_board: Node = panel._ram_board
+	_check(ram_board != null, "RAM: aparece el minijuego de puntos")
+	_check(bool(ram_board._dot_visible[0]) and bool(ram_board._dot_visible[1]),
+		"RAM: aparecen primero los puntos izquierdo y derecho")
+	_check(not bool(ram_board._dot_visible[2]), "RAM: el punto central todavía está oculto")
+	var ram_done := [false]
+	panel.done.connect(func() -> void: ram_done[0] = true)
+	ram_board.lift_dot_for_test(0)
+	_check(bool(ram_board._dot_lifted[0]), "RAM: el punto izquierdo se puede arrastrar")
+	ram_board.lift_dot_for_test(1)
+	_check(bool(ram_board._dot_visible[2]), "RAM: aparece el punto central tras los laterales")
+	ram_board.lift_dot_for_test(2)
+	_check(bool(ram_board._dot_lifted[2]) and ram_done[0], "RAM: el punto central completa el minijuego")
+	panel.visible = false
+
+	panel.open("ram", true)
+	var ram_install: Node = panel._ram_board
+	_check(bool(ram_install._dot_visible[2]) and not bool(ram_install._dot_visible[0]),
+		"RAM inversa: primero aparece el punto central")
+	ram_install.lift_dot_for_test(2)
+	_check(bool(ram_install._dot_visible[0]) and bool(ram_install._dot_visible[1]),
+		"RAM inversa: después aparecen los puntos laterales")
+	ram_install.lift_dot_for_test(0)
+	ram_install.lift_dot_for_test(1)
+	_check(bool(ram_install._dot_lifted[0]) and bool(ram_install._dot_lifted[1]),
+		"RAM inversa: los laterales se completan hacia abajo")
+	panel.visible = false
+
 	panel.open("hdd", false)
 	var sc: Node = panel._slide_component
 	_check(sc != null, "el disco usa el minijuego de deslizar a la derecha")

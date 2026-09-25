@@ -18,6 +18,9 @@ const SWAP_COLOR := Color(1.0, 0.3, 0.42)
 
 var part: Dictionary = {}
 var revealed := false
+# En el servidor el hueco activo está vacío: se muestra como destino de
+# instalación, no como una pieza dañada.
+var install_target := false
 # Tipo de daño (volt / burn / swap) y cómo se arregla (solder / swap).
 var fault := "swap"
 var fix := "swap"
@@ -104,6 +107,8 @@ func _process(delta: float) -> void:
 		sb.shadow_size = int(round(4.0 + 8.0 * pulse))
 
 func set_part(new_part: Dictionary) -> void:
+	if not new_part.is_empty():
+		install_target = false
 	if new_part.is_empty():
 		part = {}
 		_refresh()
@@ -121,6 +126,10 @@ func clear_part() -> void:
 
 func set_revealed(new_value: bool) -> void:
 	revealed = new_value
+	_refresh()
+
+func set_install_target(on: bool) -> void:
+	install_target = on
 	_refresh()
 
 func is_empty() -> bool:
@@ -170,8 +179,8 @@ func _refresh() -> void:
 	if part.is_empty():
 		part_label.text = "- -"
 		part_label.add_theme_color_override("font_color", Color(1, 1, 1, 0.4))
-		status_label.text = "espacio libre"
-		status_label.add_theme_color_override("font_color", Color(1, 1, 1, 0.5))
+		status_label.text = "INSTALAR AQUÍ" if install_target else "espacio libre"
+		status_label.add_theme_color_override("font_color", Color(0.3, 1.0, 0.8, 0.9) if install_target else Color(1, 1, 1, 0.5))
 		remove_button.visible = false
 		examine_button.visible = false
 	else:

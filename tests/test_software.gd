@@ -1,10 +1,9 @@
 extends Node
 
 # Verificación del mundo de SOFTWARE (sección 2):
-# el único nivel con sus SIETE PCs y sus siete minijuegos (descargas,
-# controladores, sistema operativo, virus, procesos, cambiar de sistema
-# y anuncios), el pendrive, la ficha con los pasos 1-2-3 apilados, la
-# sala construida por código y los tutoriales de cada minijuego.
+# seis niveles de progresión (dos básicos, dos avanzados y dos con todo
+# junto), los siete minijuegos, el pendrive, la sala construida por código
+# y los tutoriales independientes.
 
 const EXPECTED := ["download", "drivers", "os_install", "virus", "processes", "os_swap", "ads"]
 
@@ -27,24 +26,34 @@ func _ready() -> void:
 # Sección, nivel y tareas (todo síncrono: el cronómetro no avanza)
 # ------------------------------------------------------------------
 func _seccion_y_nivel() -> void:
-	_check(Game.unlocked_levels == 2, "la seccion de software esta habilitada")
-	_check(Game.SOFTWARE_LEVELS.size() == 1, "el mundo de software trae UN solo nivel")
+	_check(Game.unlocked_levels == 3, "las secciones de software y servidores estan habilitadas")
+	_check(Game.SOFTWARE_LEVELS.size() == 6, "el mundo de software trae seis niveles")
 	_check(Game.SOFTWARE_TUTORIALS.size() == 7, "y SIETE tutoriales propios")
+	_check(Game.level_stage_name(1, Game.SECTION_SOFTWARE) == "BÁSICOS", "nivel 1 software: básicos")
+	_check(Game.level_stage_name(2, Game.SECTION_SOFTWARE) == "BÁSICOS", "nivel 2 software: básicos")
+	_check(Game.level_stage_name(3, Game.SECTION_SOFTWARE) == "AVANZADOS", "nivel 3 software: avanzados")
+	_check(Game.level_stage_name(4, Game.SECTION_SOFTWARE) == "AVANZADOS", "nivel 4 software: avanzados")
+	_check(Game.level_stage_name(5, Game.SECTION_SOFTWARE) == "TODO JUNTO", "nivel 5 software: todo junto")
+	_check(Game.level_stage_name(6, Game.SECTION_SOFTWARE) == "TODO JUNTO", "nivel 6 software: todo junto")
 
-	Game.start_level(1, Game.SECTION_SOFTWARE)
-	_check(Game.current_section == 2, "arranca en la seccion 2")
-	_check(Game.current_level == 1, "nivel 1 de la seccion 2")
-	_check(Game.task_count == 7, "el nivel tiene LAS SIETE PCs")
-	_check(Game.current_tasks.size() == 7, "7 tareas generadas")
-	_check(Game.time_left == Game.SOFTWARE_LEVELS[0].time, "cronometro del mundo de software")
-	_check(Game.uses_software_room(), "usa la sala de software")
-	_check(not Game.uses_small_room() and not Game.uses_medium_room(), "no confunde la sala con la de hardware")
-	_check(Game.uses_closed_room(), "tambien es una sala cerrada")
-	_check(Game.level_parts().is_empty(), "sin repuestos: no hay piezas en este mundo")
-	_check(not Game.level_has_trash(), "sin papelera: no hay piezas que botar")
-	_check(not Game.level_uses_volt() and not Game.level_uses_solder(), "sin voltimetro ni cautin")
+	for idx in range(1, Game.SOFTWARE_LEVELS.size() + 1):
+		Game.start_level(idx, Game.SECTION_SOFTWARE)
+		_check(Game.current_section == 2, "nivel %d arranca en la seccion 2" % idx)
+		_check(Game.current_level == idx, "nivel %d de la seccion 2" % idx)
+		_check(Game.task_count == Game.SOFTWARE_LEVELS[idx - 1].pc_count,
+			"nivel %d tiene sus %d PCs" % [idx, Game.SOFTWARE_LEVELS[idx - 1].pc_count])
+		_check(Game.current_tasks.size() == Game.task_count, "nivel %d genera sus tareas" % idx)
+		_check(Game.time_left == Game.SOFTWARE_LEVELS[idx - 1].time, "cronometro del nivel %d" % idx)
+		_check(Game.uses_software_room(), "nivel %d usa la sala de software" % idx)
+		_check(not Game.uses_small_room() and not Game.uses_medium_room(), "nivel %d no confunde la sala" % idx)
+		_check(Game.uses_closed_room(), "nivel %d se juega en sala cerrada" % idx)
+		_check(Game.level_parts().is_empty(), "nivel %d no tiene repuestos" % idx)
+		_check(not Game.level_has_trash(), "nivel %d no tiene papelera" % idx)
+		_check(not Game.level_uses_volt() and not Game.level_uses_solder(), "nivel %d no usa mecánica de hardware" % idx)
 
-	# Cada PC trae SU minijuego, en el mismo orden en que se colocan.
+	# El nivel 5 es el primero que junta las siete PCs.
+	Game.start_level(5, Game.SECTION_SOFTWARE)
+	_check(Game.current_tasks.size() == 7, "el nivel TODO JUNTO tiene LAS SIETE PCs")
 	for i in EXPECTED.size():
 		var task: Dictionary = Game.current_tasks[i]
 		_check(task.kind == EXPECTED[i], "tarea %d = %s" % [i + 1, EXPECTED[i]])
@@ -52,7 +61,6 @@ func _seccion_y_nivel() -> void:
 		_check(int(task.id) == i + 1, "la tarea %d lleva su PC" % (i + 1))
 		_check(Game.PART_TITLES.has(task.kind), "y su titulo en el menu")
 
-	# ---- Completar el nivel: las 7 PCs -----------------------------
 	for i in 7:
 		Game.mark_repaired(i + 1)
 		if i < 6:
@@ -65,11 +73,12 @@ func _seccion_y_nivel() -> void:
 # La ficha del nivel: los pasos 1, 2, 3… uno debajo del otro
 # ------------------------------------------------------------------
 func _ficha_y_pendrive() -> void:
-	var info := Game.software_level_info_text()
+	Game.start_level(5, Game.SECTION_SOFTWARE)
+	var info := Game.software_level_info_text(5)
 	_check(info.contains("QUÉ HAY EN ESTE NIVEL"), "ficha del nivel del mundo de software")
 	_check(info.contains("CONTROLES"), "la ficha explica los controles")
 	_check(info.contains("PENDRIVE"), "y explica que el pendrive lleva los archivos")
-	_check(info.count("E sobre la PC") == 7, "los 7 pasos explican su movimiento")
+	_check(info.count("   PC ") == 7, "los 7 pasos explican su movimiento")
 	_check(Game.level_info_text(1, Game.SECTION_SOFTWARE).contains("QUÉ HAY"), "la ficha llega por seccion")
 
 	# Los números van en orden y cada uno queda EN SU LÍNEA, con la
@@ -98,9 +107,10 @@ func _minijuegos() -> void:
 	_check(hud.software_panel != null, "el panel de software existe")
 	_check(hud.software_panel.visible == false, "arranca cerrado")
 	_check(hud.software_host.visible == false, "y su contenedor TAMBIEN (no tapa los botones del menu)")
-	_check(hud.MINIGAMES.size() == 7, "el registro reparte 7 minijuegos por tipo de PC")
+	_check(hud.MINIGAMES.size() == 8, "el registro reparte 7 minijuegos de software y la configuración del servidor")
 
-	Game.start_level(1, Game.SECTION_SOFTWARE)
+	# Los minijuegos completos se prueban en el nivel TODO JUNTO.
+	Game.start_level(5, Game.SECTION_SOFTWARE)
 	_check(Game.pendrive.is_empty(), "el nivel empieza con el pendrive vacio")
 	_check(Game.pendrive_pc == 0, "…y el pendrive empieza FUERA de todas las PCs")
 
@@ -338,6 +348,19 @@ func _minijuegos() -> void:
 	if procs == null:
 		hud.free()
 		return
+	_check(Game.usb_optional("processes") and not Game.usb_needed("processes"),
+		"la limpieza de procesos no exige pendrive")
+	_check(hud.software_usb_card.visible and not hud.software_block.visible,
+		"el USB opcional sale en una tarjeta aparte y no bloquea el minijuego")
+	_check(hud.software_scroll.visible, "el administrador se puede usar sin USB")
+	hud.software_usb_card_button.pressed.emit()
+	_check(Game.pendrive_in(5), "también se puede meter el pendrive en procesos")
+	_check(hud.software_usb_card_status.text.contains("metido"),
+		"la tarjeta informa de que el USB es opcional")
+	hud.software_usb_card_files_button.pressed.emit()
+	_check(hud.software_page_usb.visible, "la tarjeta abre el pendrive como cuadro aparte")
+	hud._show_software_tab("error")
+	_check(hud.software_page_error.visible, "y se vuelve al minijuego de limpieza")
 	_check(procs.required == 3, "hay 3 procesos maliciosos")
 	_check(procs._rows.size() == 7, "7 procesos en la lista (3 malos y 4 buenos)")
 	var good_idx := -1
@@ -411,15 +434,16 @@ func _minijuegos() -> void:
 	if ads == null:
 		hud.free()
 		return
-	_check(hud.software_usb_row.visible, "ahora TODAS las PCs exigen el pendrive metido")
-	_check(hud.software_block.visible,
-		"sin el pendrive, un aviso ocupa el sitio del minijuego")
-	_check(hud.software_scroll.visible == false, "…y el minijuego empieza APAGADO")
-	Game.pendrive_plug(7)
+	_check(Game.usb_optional("ads") and not Game.usb_needed("ads"),
+		"la limpieza de anuncios no exige pendrive")
+	_check(hud.software_usb_card.visible and not hud.software_block.visible,
+		"anuncios también muestra el USB en una tarjeta separada")
+	_check(hud.software_scroll.visible, "el minijuego de anuncios se ve sin USB")
+	_check(hud.software_tab_error.text == "LIMPIEZA", "el pendrive no se presenta como otra sección")
+	hud.software_usb_card_button.pressed.emit()
+	_check(Game.pendrive_in(7), "también se puede insertar el pendrive en anuncios")
 	await get_tree().process_frame
-	await get_tree().process_frame
-	_check(hud.software_block.visible == false, "al meter el pendrive el aviso se va solo")
-	_check(hud.software_scroll.visible, "y el minijuego se ve para empezar")
+	_check(hud.software_scroll.visible, "insertarlo no oculta el minijuego")
 	_check(ads.count == 3, "el nivel pide cerrar 3 ventanas de anuncios")
 	_check(ads._open.size() == 3, "y las tres se abren a la vez")
 	_check(_steps_of(ads) != null, "con sus pasos 1, 2 y 3 apilados")
@@ -500,15 +524,23 @@ func _tutoriales() -> void:
 	Game.finish_tutorial()
 
 	# LAS PANTALLAS DEL TUTORIAL TIENEN QUE ENTRAR EN LA VENTANA:
-	# los botones EMPEZAR / VOLVER y el de "terminado" nunca se recortan.
+	# se conserva EMPEZAR y la salida se hace con ESC → pausa.
 	var hud_t: Node = load("res://scenes/ui/hud.tscn").instantiate()
 	add_child(hud_t)
 	await get_tree().process_frame
 	Game.start_tutorial("download")
 	await get_tree().create_timer(0.6).timeout
 	_check(hud_t.tut_intro.visible, "la introduccion del tutorial se abre")
-	_check(_dentro(hud_t.tut_intro_start) and _dentro(hud_t.tut_intro_back),
-		"los botones EMPEZAR y VOLVER se ven COMPLETOS")
+	var menu_t: Node = hud_t.get_node("MainMenu")
+	var cancel := InputEventAction.new()
+	cancel.action = "ui_cancel"
+	cancel.pressed = true
+	menu_t._unhandled_input(cancel)
+	_check(Game.state == Game.State.PAUSED, "ESC abre la pausa también en un tutorial")
+	menu_t._resume()
+	_check(Game.state == Game.State.PLAYING, "REANUDAR devuelve el control del tutorial")
+	_check(_dentro(hud_t.tut_intro_start),
+		"el botón EMPEZAR se ve COMPLETO")
 	_check(_dentro(hud_t.tut_intro_title) and _dentro(hud_t.tut_intro_hint),
 		"…y también el título y la ayuda")
 	_check(hud_t.tut_intro_body.get_parent() is ScrollContainer,
@@ -517,7 +549,7 @@ func _tutoriales() -> void:
 		and hud_t.tut_intro_start.get_parent() != hud_t.tut_intro_body.get_parent()
 		and hud_t.tut_intro_start.get_parent().get_parent()
 			== hud_t.tut_intro_body.get_parent().get_parent(),
-		"…y EMPEZAR/VOLVER quedan FUERA del scroll, siempre a la vista")
+		"…y EMPEZAR queda FUERA del scroll, siempre a la vista")
 	_check(hud_t.tut_intro_start.get_parent().get_parent() == hud_t.tut_intro_title.get_parent(),
 		"…y el scroll NO echa los botones de la caja")
 	# En modo tutorial "reparar" NO anota puntos: solo avisa y enseña la
@@ -525,8 +557,7 @@ func _tutoriales() -> void:
 	Game.mark_repaired(1)
 	await get_tree().create_timer(0.6).timeout
 	_check(hud_t.tut_complete.visible, "al terminar se ve la pantalla de TUTORIAL TERMINADO")
-	_check(_dentro(hud_t.tut_complete_text) and _dentro(hud_t.tut_repeat_button)
-		and _dentro(hud_t.tut_complete_exit),
+	_check(_dentro(hud_t.tut_complete_text) and _dentro(hud_t.tut_repeat_button),
 		"…y esa pantalla también cabe ENTERA en la ventana")
 	Game.finish_tutorial()
 	Game.tutorial_active = false
@@ -534,12 +565,12 @@ func _tutoriales() -> void:
 	Game.hud = null
 
 # ------------------------------------------------------------------
-# El menú: 7 botones de software, sección 2 y su único nivel
+# El menú: 7 botones de software y seis niveles de progresión
 # ------------------------------------------------------------------
 func _menu() -> void:
 	var menu: Node = load("res://scenes/ui/main_menu.tscn").instantiate()
 	add_child(menu)
-	_check(menu._tut_part_buttons.size() == 17, "10 tutoriales de hardware y 7 de software")
+	_check(menu._tut_part_buttons.size() == 18, "11 tutoriales de hardware y 7 de software")
 	_check(menu._tut_software_buttons.size() == 7, "un boton por minijuego")
 
 	menu._current_section = 2
@@ -561,17 +592,22 @@ func _menu() -> void:
 	menu._current_section = 1
 	menu._open_tutorials_pick()
 	_check(menu.tut_ram_button.visible, "en la seccion 1 se ven los tutoriales de piezas")
+	_check(menu.tut_liquid_button.visible, "se ve el tutorial de tuberías líquidas")
 	_check(not menu._tut_software_buttons["download"].visible, "y NO se ven los de software")
 	await get_tree().create_timer(1.0).timeout
 	_check(_dentro_o_avisa(menu.tutorials_pick_screen.get_node_or_null("Columns")),
 		"la pantalla de tutoriales (seccion 1, 11 botones) TAMBIEN cabe entera")
 
-	# Entrar al mundo por el menú: sección 2 → su título, su ficha y su nivel.
+	# Entrar al mundo por el menú: sección 2 → seis niveles con etapa.
 	menu._select_section(2)
 	_check(menu.section_title.text.contains("SOFTWARE"), "el menu de seccion anuncia el mundo de software")
-	_check(menu.section_level_buttons[0].visible, "su UNICO nivel se ve")
-	_check(not menu.section_level_buttons[1].visible, "no hay un nivel 2 que no existe")
-	_check(not menu.section_level_buttons[5].visible, "y no hereda los 6 niveles del taller")
+	for i in 6:
+		_check(menu.section_level_buttons[i].visible, "el nivel %d de software se ve" % (i + 1))
+	_check(menu.section_level_buttons[0].text.contains("LIMPIEZA BÁSICA"), "el nivel 1 tiene título propio")
+	_check(menu.section_level_buttons[2].text.contains("INTERNET Y CONTROLADORES"), "el nivel 3 tiene título propio")
+	_check(menu.section_level_buttons[4].text.contains("TODO JUNTO"), "el nivel 5 tiene título de conjunto")
+	_check(menu.tutorials_pick_back_button != null and menu.tutorials_pick_back_button.visible,
+		"la sección de tutoriales conserva el botón VOLVER")
 	menu._play_level(1)
 	_check(Game.state == Game.State.PLAYING, "JUGAR arranca la partida")
 	_check(Game.current_section == 2, "desde el menu se entra en la seccion 2")
@@ -589,8 +625,8 @@ func _menu() -> void:
 func _sala() -> void:
 	var main: Node = load("res://scenes/main.tscn").instantiate()
 	add_child(main)
-	# El nivel se arranca DESPUÉS para que la sala se construya con las 7 PCs.
-	Game.start_level(1, Game.SECTION_SOFTWARE)
+	# El nivel TODO JUNTO se arranca DESPUÉS para probar la sala completa.
+	Game.start_level(5, Game.SECTION_SOFTWARE)
 	await get_tree().create_timer(0.6).timeout
 	_check(Game.state == Game.State.PLAYING, "el nivel de software arranca en PLAYING")
 	_check(Game.time_left > 0.0, "el cronometro corre en el mundo de software")
@@ -604,8 +640,8 @@ func _sala() -> void:
 			pcs.append(child)
 	_check(pcs.size() == 7, "la sala construye LAS SIETE PCs")
 
-	# La PC de INTERNET va DETRÁS de la fila, centrada y aparte: es la
-	# fuente de la que bajan los drivers y los sistemas.
+	# La PC de INTERNET ocupa la esquina delantera derecha, lejos de la fila
+	# de PCs dañadas: es la fuente de los drivers.
 	var inet: Node3D = null
 	var row: Array = []
 	for p in pcs:
@@ -613,19 +649,22 @@ func _sala() -> void:
 			inet = p
 		else:
 			row.append(p)
-	_check(inet != null, "la PC de INTERNET va DETRAS de las demas")
+	_check(inet != null, "la PC de INTERNET está en su esquina libre")
 	row.sort_custom(func(a, b) -> bool: return (a as Node3D).position.x < (b as Node3D).position.x)
 	_check(row.size() == 6, "y las otras seis forman la fila")
 	if inet != null:
-		_check(is_equal_approx(inet.position.x, 0.0), "la PC de INTERNET queda en el centro")
-		_check(is_equal_approx(inet.position.z, -6.375), "…mas atras que la fila, separada de ella")
+		_check(is_equal_approx(inet.position.x, 6.0), "la PC de INTERNET esta en la ESQUINA delantera derecha")
+		_check(is_equal_approx(inet.position.z, 6.2), "…en la esquina libre, lejos de la fila")
+		_check(is_equal_approx(inet.rotation.y, PI), "…y mira hacia el jugador desde la esquina")
+		_check(inet.position.z - (row[0] as Node3D).position.z > 8.0,
+			"…y ALEJADA de la fila: más de 8 m de separación")
 		_check(inet.task is Dictionary and inet.task.get("kind", "") == "download",
 			"la PC de INTERNET guarda su tarea")
 	for i in row.size():
 		var pos: Vector3 = (row[i] as Node3D).position
 		_check(row[i].pc_id == i + 2, "la PC %d ocupa su sitio en la fila" % (i + 2))
 		_check(row[i].kind == EXPECTED[i + 1], "la PC %d abre %s" % [i + 2, EXPECTED[i + 1]])
-		_check(is_equal_approx(pos.z, -4.0), "la PC %d deja pasillo por detras" % (i + 2))
+		_check(is_equal_approx(pos.z, -3.2), "la PC %d deja pasillo por detras" % (i + 2))
 		_check(row[i].task is Dictionary and row[i].task.get("kind", "") == EXPECTED[i + 1],
 			"la PC %d guarda su tarea" % (i + 2))
 		if i > 0:
@@ -637,19 +676,18 @@ func _sala() -> void:
 	# El jugador camina, mira cada PC y la abre con E (flujo real de juego).
 	var pl: Node3D = main.get_node("Player")
 	var hud: Node = main.get_node("HUD")
-	# Antes: el pasillo entre la fila y la PC de internet medía menos que
-	# el jugador (0,8 m) y no se podía plantar delante de ella.
+	# En la esquina delantera el jugador se planta delante por el lado interior.
 	var inet_pc: Node3D = _pc_by_id(pcs, 1)
-	var hueco := Vector3(inet_pc.position.x, pl.position.y, inet_pc.position.z + 1.1)
+	var hueco := Vector3(inet_pc.position.x, pl.position.y, inet_pc.position.z - 1.1)
 	pl.velocity = Vector3.ZERO
 	pl.position = hueco
 	for f in 6:
 		await get_tree().physics_frame
 	var dxz := Vector2(pl.position.x - hueco.x, pl.position.z - hueco.z)
 	_check(dxz.length() < 0.12,
-		"hay pasillo por detras: se puede plantar delante de la PC de INTERNET")
+		"hay espacio delante de la PC de INTERNET para llegar a ella")
 
-	await _aim_at(pl, _pc_by_id(pcs, 1), 1.1)
+	await _aim_at(pl, _pc_by_id(pcs, 1), -1.1)
 	_check(pl.current_interactable is SoftwarePC and pl.current_interactable.pc_id == 1, "la mira alcanza la PC 1 (INTERNET)")
 	pl._try_interact()
 	_check(hud.software_panel.visible, "la tecla E abre la ventana de la PC 1")

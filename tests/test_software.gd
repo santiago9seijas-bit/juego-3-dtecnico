@@ -618,14 +618,14 @@ func _sala() -> void:
 	_check(row.size() == 6, "y las otras seis forman la fila")
 	if inet != null:
 		_check(is_equal_approx(inet.position.x, 0.0), "la PC de INTERNET queda en el centro")
-		_check(is_equal_approx(inet.position.z, -6.0), "…mas atras que la fila, separada de ella")
+		_check(is_equal_approx(inet.position.z, -6.375), "…mas atras que la fila, separada de ella")
 		_check(inet.task is Dictionary and inet.task.get("kind", "") == "download",
 			"la PC de INTERNET guarda su tarea")
 	for i in row.size():
 		var pos: Vector3 = (row[i] as Node3D).position
 		_check(row[i].pc_id == i + 2, "la PC %d ocupa su sitio en la fila" % (i + 2))
 		_check(row[i].kind == EXPECTED[i + 1], "la PC %d abre %s" % [i + 2, EXPECTED[i + 1]])
-		_check(is_equal_approx(pos.z, -4.4), "la PC %d esta pegada a la pared" % (i + 2))
+		_check(is_equal_approx(pos.z, -4.0), "la PC %d deja pasillo por detras" % (i + 2))
 		_check(row[i].task is Dictionary and row[i].task.get("kind", "") == EXPECTED[i + 1],
 			"la PC %d guarda su tarea" % (i + 2))
 		if i > 0:
@@ -637,7 +637,19 @@ func _sala() -> void:
 	# El jugador camina, mira cada PC y la abre con E (flujo real de juego).
 	var pl: Node3D = main.get_node("Player")
 	var hud: Node = main.get_node("HUD")
-	await _aim_at(pl, _pc_by_id(pcs, 1))
+	# Antes: el pasillo entre la fila y la PC de internet medía menos que
+	# el jugador (0,8 m) y no se podía plantar delante de ella.
+	var inet_pc: Node3D = _pc_by_id(pcs, 1)
+	var hueco := Vector3(inet_pc.position.x, pl.position.y, inet_pc.position.z + 1.1)
+	pl.velocity = Vector3.ZERO
+	pl.position = hueco
+	for f in 6:
+		await get_tree().physics_frame
+	var dxz := Vector2(pl.position.x - hueco.x, pl.position.z - hueco.z)
+	_check(dxz.length() < 0.12,
+		"hay pasillo por detras: se puede plantar delante de la PC de INTERNET")
+
+	await _aim_at(pl, _pc_by_id(pcs, 1), 1.1)
 	_check(pl.current_interactable is SoftwarePC and pl.current_interactable.pc_id == 1, "la mira alcanza la PC 1 (INTERNET)")
 	pl._try_interact()
 	_check(hud.software_panel.visible, "la tecla E abre la ventana de la PC 1")
@@ -751,10 +763,11 @@ func _pc_by_id(pcs: Array, pc_id: int) -> Node3D:
 	return null
 
 # Coloca al jugador delante del objetivo y lo hace mirarlo de lleno.
-func _aim_at(pl: Node3D, target: Node3D) -> void:
+# Con z_off más corto se mete en el pasillo de detrás (PC de internet).
+func _aim_at(pl: Node3D, target: Node3D, z_off := 3.0) -> void:
 	pl.rotation = Vector3.ZERO
 	pl.velocity = Vector3.ZERO
-	pl.position = Vector3(target.global_position.x, pl.position.y, target.global_position.z + 3.0)
+	pl.position = Vector3(target.global_position.x, pl.position.y, target.global_position.z + z_off)
 	# El rayo de interacción se actualiza al final de cada paso físico.
 	await get_tree().physics_frame
 	await get_tree().physics_frame

@@ -152,11 +152,14 @@ func _setup_tutorial_room() -> void:
 # el pendrive que baja la PC de internet.
 # ------------------------------------------------------------------
 const SW_ROOM_HALF := 7.0
-const SW_DESK_Z := -4.4
+# La fila se aparta un poco del muro para dejar PASILLO detrás: así se
+# puede rodear la fila y plantarse delante de la PC de internet.
+const SW_DESK_Z := -4.0
 const SW_DESK_GAP := 1.95
 # La PC de INTERNET (la fuente: de ahí bajan drivers y sistemas) va
-# DETRÁS de la fila, centrada y separada: se llega por los lados.
-const SW_INET_Z := -6.0
+# DETRÁS de la fila, centrada y con su escritorio pegado al muro: con la
+# fila en -4.0 queda un pasillo de 1,5 m por detrás (el jugador mide 0,8).
+const SW_INET_Z := -6.375
 
 func _setup_software_room() -> void:
 	_build_closed_room(SW_ROOM_HALF)
